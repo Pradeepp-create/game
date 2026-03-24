@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fight Night</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Start Menu -->
+        <div id="startMenu">
+            <h1>Fight Night</h1>
+            <button id="startBtn">Start</button>
+            <select id="difficulty">
+                <option value="easy">Easy</option>
+                <option value="med">Med</option>
+                <option value="hard">Hard</option>
+            </select>
+        </div>
+
+        <!-- Game Canvas -->
+        <canvas id="canvas" width="1200" height="600"></canvas>
+
+        <!-- UI Overlay -->
+        <div id="ui">
+            <div id="healthPlayer" class="healthbar">
+                <div id="healthFillPlayer"></div>
+            </div>
+            <div id="healthEnemy" class="healthbar">
+                <div id="healthFillEnemy"></div>
+            </div>
+            <div id="comboCounter">0 HIT</div>
+            <div id="cooldownSpecial">Special Ready</div>
+        </div>
+
+        <!-- End Screen -->
+        <div id="endScreen">
+            <h2 id="endMessage"></h2>
+            <button id="restartBtn">Restart</button>
+        </div>
+
+        <!-- Pause -->
+        <div id="pauseScreen">PAUSED - P to resume</div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
