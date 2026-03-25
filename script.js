@@ -1,4 +1,4 @@
-console.log('🔥 FIGHT NIGHT PRO - BEAST MODE!');
+console.log('⚖️ BALANCED FIGHT NIGHT v3.0');
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -12,30 +12,34 @@ let shake = 0;
 let pJump = 0, eJump = 0;
 let pCooldown = 0;
 let particles = [];
-let enemyRage = 0; // Beast mode meter
+let enemyAggro = 0; // Balanced aggro
 
 // Audio
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-function playSound(freq, duration, type = 'punch') {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(type === 'special' ? 0.5 : 0.3, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
+function playSound(freq, duration) {
+    try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
 }
 
-// Particles
+// Particles (simplified)
 function spawnParticles(x, y, count, color) {
     for (let i = 0; i < count; i++) {
         particles.push({
-            x, y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15 - 3,
-            life: 40, maxLife: 40, color,
-            size: Math.random()*4 + 2
+            x, y,
+            vx: (Math.random()-0.5)*10,
+            vy: Math.random()*-8,
+            life: 25,
+            color
         });
     }
 }
@@ -43,9 +47,8 @@ function spawnParticles(x, y, count, color) {
 function updateParticles() {
     for (let i = particles.length-1; i >= 0; i--) {
         const p = particles[i];
-        p.x += p.vx; p.y += p.vy; p.vy += 0.4;
-        p.life--;
-        p.vx *= 0.98;
+        p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.life--;
+        p.vx *= 0.97;
         if (p.life <= 0) particles.splice(i, 1);
     }
 }
@@ -71,9 +74,8 @@ function resetGame() {
     pHealth = eHealth = 100;
     px = 80; ex = 820;
     py = ey = 360;
-    combo = enemyRage = 0;
-    particles = [];
-    pCooldown = 0;
+    combo = enemyAggro = 0;
+    particles = []; pCooldown = 0;
 }
 
 function update() {
@@ -82,109 +84,100 @@ function update() {
     comboTimer = Math.max(0, comboTimer - 1);
     pCooldown = Math.max(0, pCooldown - 1);
     
-    // PLAYER CONTROLS
-    let moveSpeed = 7;
-    if (keys['ArrowLeft'] || keys['a']) px -= moveSpeed;
-    if (keys['ArrowRight'] || keys['d']) px += moveSpeed;
-    if ((keys['ArrowUp'] || keys['w'] || keys[' ']) && pJump === 0) {
-        pJump = -18;
+    // PLAYER - SMOOTH CONTROLS
+    const speed = 6;
+    if (keys['ArrowLeft'] || keys['a']) px -= speed;
+    if (keys['ArrowRight'] || keys['d']) px += speed;
+    if ((keys['ArrowUp'] || keys['w'] || keys[' ']) && Math.abs(pJump) < 0.1) {
+        pJump = -16;
     }
     
-    // Jump physics
-    if (pJump !== 0) {
-        pJump += 1.1;
-        py += pJump;
-        if (pJump > 0 && py >= 360) {
-            py = 360;
-            pJump = 0;
-        }
+    pJump += 1;
+    py += pJump;
+    if (py >= 360) {
+        py = 360;
+        pJump = 0;
     }
     
-    px = Math.max(0, Math.min(930, px));
+    px = Math.max(10, Math.min(930, px));
     
-    // BEAST ENEMY AI
-    const dist = ex - px;
-    let enemySpeed = 5 + enemyRage * 0.3; // Rages faster
+    // BALANCED ENEMY AI
+    const dist = Math.abs(ex - px);
+    const baseSpeed = 4;
     
-    // Perfect chase
-    if (Math.abs(dist) > 90) {
-        ex -= Math.sign(dist) * enemySpeed;
-    } else {
-        // PERFECT BLOCK + COUNTER
-        if (pCooldown > 0 && Math.random() < 0.4) {
-            // Enemy blocks
-            combo = 0;
-        } else if (Math.random() < 0.08 + enemyRage * 0.02) {
-            // DEADLY COUNTER
-            pHealth -= 25 + enemyRage * 2;
-            shake = 20;
-            spawnParticles(px + 25, py + 40, 12, '#ff4444');
-            playSound(180, 0.15);
-        }
+    // Chase (not too fast)
+    if (dist > 85) {
+        ex += (px > ex ? 1 : -1) * baseSpeed;
     }
     
-    // Enemy jumps aggressively
-    if (Math.random() < 0.02 + enemyRage * 0.005 && eJump === 0) {
-        eJump = -16;
-    }
-    if (eJump !== 0) {
-        eJump += 1;
-        ey += eJump;
-        if (eJump > 0 && ey >= 360) {
-            ey = 360;
-            eJump = 0;
-        }
+    // Jump less often
+    if (Math.random() < 0.008 && Math.abs(eJump) < 0.1) {
+        eJump = -14;
     }
     
-    ex = Math.max(0, Math.min(930, ex));
+    eJump += 1;
+    ey += eJump;
+    if (ey >= 360) {
+        ey = 360;
+        eJump = 0;
+    }
     
-    // PLAYER ATTACKS (Harder to land)
-    const attackDist = 75 + Math.abs(pJump) * 2; // Jump extends range
-    if (keys['f'] && pCooldown <= 0 && Math.abs(px - ex) < attackDist) {
-        eHealth -= 16;
+    ex = Math.max(10, Math.min(930, ex));
+    
+    // PLAYER ATTACKS (EASIER HITS)
+    const hitRange = 85;
+    if (keys['f'] && pCooldown <= 0 && dist < hitRange) {
+        eHealth -= 18;
         combo++;
-        shake = 10;
-        pCooldown = 20;
-        spawnParticles(ex + 25, ey + 40, 10, '#44aaff');
+        comboTimer = 90;
+        shake = 8;
+        spawnParticles(ex + 20, ey + 35, 8, '#44aaff');
         playSound(220, 0.12);
+        pCooldown = 12;
         keys['f'] = false;
     }
-    if (keys['g'] && pCooldown <= 0 && Math.abs(px - ex) < attackDist) {
-        eHealth -= 26;
+    if (keys['g'] && pCooldown <= 0 && dist < hitRange) {
+        eHealth -= 25;
         combo += 2;
-        shake = 16;
-        pCooldown = 30;
-        spawnParticles(ex + 25, ey + 40, 15, '#ffff44');
-        playSound(250, 0.18);
+        comboTimer = 120;
+        shake = 12;
+        spawnParticles(ex + 20, ey + 35, 12, '#ffff44');
+        playSound(260, 0.15);
+        pCooldown = 18;
         keys['g'] = false;
     }
-    if (keys['q'] && pCooldown <= 0 && Math.abs(px - ex) < attackDist + 30) {
-        eHealth -= 42;
-        combo += 5;
-        shake = 30;
-        enemyRage += 15; // Enrage enemy!
-        pCooldown = 90;
-        spawnParticles(ex + 25, ey + 20, 25, '#ff44ff');
-        playSound(450, 0.4, 'special');
+    if (keys['q'] && pCooldown <= 0 && dist < hitRange + 20) {
+        eHealth -= 40;
+        combo += 4;
+        comboTimer = 180;
+        shake = 20;
+        enemyAggro += 10;
+        spawnParticles(ex + 20, ey + 20, 20, '#ff44ff');
+        playSound(400, 0.3);
+        pCooldown = 80;
         keys['q'] = false;
     }
     
-    // Enemy rages when low HP
-    enemyRage = Math.min(50, enemyRage + 0.1);
-    if (eHealth < 30) enemyRage = 50;
+    // ENEMY ATTACKS (FAIR DAMAGE)
+    if (dist < 75 && Math.random() < 0.025) {
+        pHealth -= 14;
+        shake = 8;
+        spawnParticles(px + 25, py + 35, 8, '#ff4444');
+        playSound(180, 0.12);
+    }
     
     // UI
     document.getElementById('pHealth').style.width = Math.max(0, pHealth) + '%';
     document.getElementById('eHealth').style.width = Math.max(0, eHealth) + '%';
     document.getElementById('combo').textContent = 
-        comboTimer > 0 ? `${combo} COMBO!` : 'ATTACK!';
+        comboTimer > 0 ? `${combo} COMBO!` : 'FIGHT ON';
     
     updateParticles();
     
-    // WIN/LOSE
+    // GAME OVER
     if (pHealth <= 0 || eHealth <= 0) {
         document.getElementById('result').textContent = 
-            pHealth > 0 ? '🏆 RYU WINS!' : '💀 AKUMA DOMINATES';
+            pHealth > 0 ? 'VICTORY!' : 'DEFEAT';
         document.getElementById('gameOver').classList.remove('hidden');
         gameOn = false;
     }
@@ -193,96 +186,87 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, 1000, 500);
     
-    // EPIC BACKGROUND
-    const bgGrad = ctx.createRadialGradient(500, 250, 0, 500, 250, 600);
-    bgGrad.addColorStop(0, '#1a0033');
-    bgGrad.addColorStop(0.3, '#2d004d');
-    bgGrad.addColorStop(0.7, '#0a001a');
-    bgGrad.addColorStop(1, '#000');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0,0,1000,500);
+    // CLEAN BACKGROUND
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, 1000, 500);
     
-    // ARENA FLOOR
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0,400,1000,100);
-    ctx.fillStyle = '#333';
-    for (let i = 0; i < 1000; i += 50) {
-        ctx.fillRect(i, 410, 40, 8);
+    // ARENA GRADIENT
+    const arenaGrad = ctx.createLinearGradient(0, 400, 0, 500);
+    arenaGrad.addColorStop(0, '#1a472a');
+    arenaGrad.addColorStop(1, '#0f2a17');
+    ctx.fillStyle = arenaGrad;
+    ctx.fillRect(0, 400, 1000, 100);
+    
+    // FLOOR LINES
+    ctx.strokeStyle = '#2a5a37';
+    ctx.lineWidth = 3;
+    for (let x = 0; x < 1000; x += 60) {
+        ctx.beginPath();
+        ctx.moveTo(x, 410);
+        ctx.lineTo(x + 40, 410);
+        ctx.stroke();
     }
     
     ctx.save();
+    
+    // SHAKE (SMOOTH)
     if (shake > 0) {
         ctx.translate(
-            Math.sin(Date.now() * 0.02) * shake,
-            Math.sin(Date.now() * 0.03) * (shake * 0.6)
+            Math.sin(Date.now() * 0.02) * Math.min(shake, 8),
+            Math.sin(Date.now() * 0.025) * Math.min(shake * 0.6, 5)
         );
+        shake--;
     }
     
-    // PARTICLES (GLOWING)
+    // PARTICLES (CLEAN)
+    ctx.shadowBlur = 12;
     particles.forEach(p => {
         ctx.save();
-        ctx.globalAlpha = p.life / p.maxLife;
-        ctx.fillStyle = p.color;
-        ctx.shadowBlur = 15;
+        ctx.globalAlpha = p.life / 25;
         ctx.shadowColor = p.color;
-        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x-3, p.y-3, 6, 6);
         ctx.restore();
     });
     
-    // RYU (PLAYER) - SPRITE STYLE
-    ctx.save();
-    ctx.shadowBlur = pCooldown > 45 ? 40 : 25;
+    // PLAYER (CLEAN SPRITE)
     ctx.shadowColor = '#44aaff';
+    ctx.shadowBlur = 18;
     
     // Head
     ctx.fillStyle = '#44aaff';
-    ctx.fillRect(px + 15, py - 10, 20, 25);
+    ctx.fillRect(px + 12, py - 8, 26, 28);
     
     // Body
-    ctx.fillStyle = pHealth > 30 ? '#0066cc' : '#444';
-    ctx.fillRect(px + 8, py + 15, 34, 50);
+    ctx.fillStyle = '#0066cc';
+    ctx.fillRect(px + 8, py + 20, 34, 45);
+    
+    // Legs (dynamic)
+    ctx.fillStyle = '#0044aa';
+    ctx.fillRect(px + 10, py + 65, 12, py < 360 ? 20 : 25);
+    ctx.fillRect(px + 28, py + 65, 12, py < 360 ? 20 : 25);
+    
+    // ENEMY (CLEAN SPRITE)
+    ctx.shadowColor = '#ff4444';
+    ctx.shadowBlur = 18;
+    
+    // Head
+    ctx.fillStyle = '#ff4444';
+    ctx.fillRect(ex + 12, ey - 8, 26, 28);
+    
+    // Body
+    ctx.fillStyle = '#cc0000';
+    ctx.fillRect(ex + 8, ey + 20, 34, 45);
     
     // Legs
-    ctx.fillStyle = '#004499';
-    ctx.fillRect(px + 10, py + 65, 12, 25);
-    ctx.fillRect(px + 28, py + 65, 12, 25);
-    
-    // Arms (attack pose)
-    if (pCooldown > 0) {
-        ctx.fillStyle = '#44aaff';
-        ctx.fillRect(px + 42, py + 20, 25, 15);
-    }
-    ctx.restore();
-    
-    // AKUMA (ENEMY) - BEAST MODE
-    ctx.save();
-    ctx.shadowBlur = 30 + enemyRage;
-    ctx.shadowColor = enemyRage > 30 ? '#ff0000' : '#ff4444';
-    
-    // Head (glowing eyes when raged)
-    ctx.fillStyle = enemyRage > 30 ? '#ff0000' : '#cc0000';
-    ctx.fillRect(ex + 15, ey - 10, 20, 25);
-    
-    // Body (muscular)
-    ctx.fillStyle = '#990000';
-    ctx.fillRect(ex + 5, ey + 15, 40, 55);
-    
-    // Horns (demon style)
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(ex + 18, ey - 25, 4, 15);
-    ctx.fillRect(ex + 28, ey - 25, 4, 15);
-    
-    // Legs
-    ctx.fillStyle = '#660000';
-    ctx.fillRect(ex + 8, ey + 70, 15, 30);
-    ctx.fillRect(ex + 27, ey + 70, 15, 30);
-    
-    ctx.restore();
+    ctx.fillStyle = '#aa0000';
+    ctx.fillRect(ex + 10, ey + 65, 12, ey < 360 ? 20 : 25);
+    ctx.fillRect(ex + 28, ey + 65, 12, ey < 360 ? 20 : 25);
     
     ctx.restore();
 }
 
-// 60FPS
+// LOOP
 function gameLoop() {
     update();
     draw();
@@ -290,4 +274,4 @@ function gameLoop() {
 }
 
 gameLoop();
-console.log('💀 BEAST AKUMA ACTIVE | Neon graphics ON!');
+console.log('✅ BALANCED + CLEAN v3.0 | Fair fights!');
