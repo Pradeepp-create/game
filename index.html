@@ -8,38 +8,48 @@
 </head>
 <body>
     <div id="container">
-        <!-- START -->
+        <!-- START SCREEN -->
         <div id="startScreen">
             <div class="neon-title">🥊 FIGHT NIGHT PRO 🥊</div>
-            <p class="neon-text">HARDCORE AI | ARCADE GRAPHICS</p>
+            <p class="neon-text">PERFECT BALANCE | 200HP | STUN/BLOCK</p>
             <div class="controls">
-                ←→A/D Move | ↑W Jump | F Punch | G Kick | Q ULTRA
+                ←→ A/D Move | ↑ W Jump | F Punch | G Kick | Q ULTRA<br>
+                <small>Land combos → Enemy STUNNED → WIN!</small>
             </div>
             <button class="neon-btn" onclick="startFight()">ENTER ARENA</button>
         </div>
 
-        <!-- ARENA -->
+        <!-- FIGHT ARENA -->
         <canvas id="canvas" width="1000" height="500"></canvas>
 
-        <!-- HUD -->
+        <!-- PREMIUM HUD -->
         <div id="hud" class="hidden">
-            <div class="fighter-info">
-                <div class="name">RYU</div>
-                <div class="health-bar"><div id="pHealth" class="health-fill"></div></div>
+            <div class="fighter-panel">
+                <div class="fighter-name">RYU</div>
+                <div class="health-container player-health-container">
+                    <div id="pHealth" class="health-fill"></div>
+                    <div class="health-numbers player-hp">200</div>
+                </div>
             </div>
-            <div id="combo" class="combo-display">READY</div>
-            <div class="fighter-info">
-                <div class="name">AKUMA</div>
-                <div class="health-bar"><div id="eHealth" class="health-fill"></div></div>
+            
+            <div id="combo" class="combo-display">PERFECT FIGHT</div>
+            
+            <div class="fighter-panel">
+                <div class="fighter-name">AKUMA</div>
+                <div class="health-container enemy-health-container">
+                    <div id="eHealth" class="health-fill"></div>
+                    <div class="health-numbers enemy-hp">200</div>
+                </div>
             </div>
         </div>
 
         <!-- GAME OVER -->
         <div id="gameOver" class="hidden">
-            <div class="neon-title" id="result">GAME OVER</div>
-            <button class="neon-btn" onclick="restartFight()">REVENGE</button>
+            <div class="neon-title" id="result">BATTLE END</div>
+            <button class="neon-btn" onclick="restartFight()">REMATCH</button>
         </div>
     </div>
+    
     <script src="script.js"></script>
 </body>
 </html>
