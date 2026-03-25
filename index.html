@@ -8,7 +8,6 @@
 </head>
 <body>
     <div id="gameContainer">
-        <!-- START SCREEN -->
         <div id="startScreen">
             <h1>🥊 FIGHT NIGHT 🥊</h1>
             <p>Street Fighter Style - Pure JS</p>
@@ -20,17 +19,15 @@
                     <option value="3">Hard</option>
                 </select>
             </div>
-            <button id="playBtn">START BATTLE</button>
+            <button onclick="startGame()">START BATTLE</button>
             <div id="controls">
                 ←→ Move | ↑ Jump | F Punch | G Kick | Q SPECIAL
             </div>
         </div>
 
-        <!-- GAME CANVAS -->
         <canvas id="gameCanvas" width="1000" height="500"></canvas>
 
-        <!-- UI -->
-        <div id="gameUI">
+        <div id="gameUI" style="display:none;">
             <div class="health-container">
                 <span>PLAYER</span>
                 <div class="health-bar">
@@ -46,10 +43,9 @@
             </div>
         </div>
 
-        <!-- GAME OVER -->
-        <div id="gameOverScreen">
+        <div id="gameOverScreen" style="display:none;">
             <h2 id="gameOverText"></h2>
-            <button id="restartBtn">FIGHT AGAIN</button>
+            <button onclick="restartGame()">FIGHT AGAIN</button>
         </div>
     </div>
 
