@@ -7,48 +7,32 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="gameContainer">
+    <div id="container">
         <div id="startScreen">
             <h1>🥊 FIGHT NIGHT 🥊</h1>
-            <p>Street Fighter Style - Pure JS</p>
+            <p>Arrow Keys + F/G/Q</p>
+            <button onclick="startFight()">START BATTLE</button>
+        </div>
+
+        <canvas id="canvas" width="900" height="450"></canvas>
+
+        <div id="ui" class="hidden">
             <div>
-                <label>Difficulty:</label>
-                <select id="diffSelect">
-                    <option value="1">Easy</option>
-                    <option value="2" selected>Medium</option>
-                    <option value="3">Hard</option>
-                </select>
+                <div>YOU</div>
+                <div class="health"><div id="pHealth" class="health-fill"></div></div>
             </div>
-            <button onclick="startGame()">START BATTLE</button>
-            <div id="controls">
-                ←→ Move | ↑ Jump | F Punch | G Kick | Q SPECIAL
+            <div id="combo">READY</div>
+            <div>
+                <div>ENEMY</div>
+                <div class="health"><div id="eHealth" class="health-fill"></div></div>
             </div>
         </div>
 
-        <canvas id="gameCanvas" width="1000" height="500"></canvas>
-
-        <div id="gameUI" style="display:none;">
-            <div class="health-container">
-                <span>PLAYER</span>
-                <div class="health-bar">
-                    <div id="playerHealth" class="health-fill"></div>
-                </div>
-            </div>
-            <div id="comboDisplay">READY</div>
-            <div class="health-container">
-                <span>ENEMY</span>
-                <div class="health-bar">
-                    <div id="enemyHealth" class="health-fill"></div>
-                </div>
-            </div>
-        </div>
-
-        <div id="gameOverScreen" style="display:none;">
-            <h2 id="gameOverText"></h2>
-            <button onclick="restartGame()">FIGHT AGAIN</button>
+        <div id="gameOver" class="hidden">
+            <h2 id="result">GAME OVER</h2>
+            <button onclick="restartFight()">AGAIN!</button>
         </div>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
