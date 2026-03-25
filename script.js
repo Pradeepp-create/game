@@ -1,4 +1,21 @@
 console.log('🚀 FIGHT GAME LOADED!');
+// INLINE FUNCTIONS - BUTTONS WORK!
+function startGame() {
+    difficulty = parseInt(document.getElementById('diffSelect').value);
+    gameRunning = true;
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameUI').style.display = 'flex';
+    player.health = 100;
+    enemy.health = 100;
+    updateUI();
+}
+
+function restartGame() {
+    document.getElementById('gameOverScreen').style.display = 'none';
+    player.x = 100;
+    enemy.x = 800;
+    startGame();
+}
 
 // Get elements
 const canvas = document.getElementById('gameCanvas');
