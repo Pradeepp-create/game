@@ -3,34 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fight Night</title>
+    <title>🥊 FIGHT NIGHT PRO 🥊</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="container">
+        <!-- START -->
         <div id="startScreen">
-            <h1>🥊 FIGHT NIGHT 🥊</h1>
-            <p>Arrow Keys + F/G/Q</p>
-            <button onclick="startFight()">START BATTLE</button>
+            <div class="neon-title">🥊 FIGHT NIGHT PRO 🥊</div>
+            <p class="neon-text">HARDCORE AI | ARCADE GRAPHICS</p>
+            <div class="controls">
+                ←→A/D Move | ↑W Jump | F Punch | G Kick | Q ULTRA
+            </div>
+            <button class="neon-btn" onclick="startFight()">ENTER ARENA</button>
         </div>
 
-        <canvas id="canvas" width="900" height="450"></canvas>
+        <!-- ARENA -->
+        <canvas id="canvas" width="1000" height="500"></canvas>
 
-        <div id="ui" class="hidden">
-            <div>
-                <div>YOU</div>
-                <div class="health"><div id="pHealth" class="health-fill"></div></div>
+        <!-- HUD -->
+        <div id="hud" class="hidden">
+            <div class="fighter-info">
+                <div class="name">RYU</div>
+                <div class="health-bar"><div id="pHealth" class="health-fill"></div></div>
             </div>
-            <div id="combo">READY</div>
-            <div>
-                <div>ENEMY</div>
-                <div class="health"><div id="eHealth" class="health-fill"></div></div>
+            <div id="combo" class="combo-display">READY</div>
+            <div class="fighter-info">
+                <div class="name">AKUMA</div>
+                <div class="health-bar"><div id="eHealth" class="health-fill"></div></div>
             </div>
         </div>
 
+        <!-- GAME OVER -->
         <div id="gameOver" class="hidden">
-            <h2 id="result">GAME OVER</h2>
-            <button onclick="restartFight()">AGAIN!</button>
+            <div class="neon-title" id="result">GAME OVER</div>
+            <button class="neon-btn" onclick="restartFight()">REVENGE</button>
         </div>
     </div>
     <script src="script.js"></script>
