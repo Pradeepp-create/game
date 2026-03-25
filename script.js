@@ -1,4 +1,4 @@
-console.log('⚖️ PERFECT 50/50 BALANCE v4.0');
+console.log('⚖️ PERFECT 50/50 BALANCE v4.0 + UI');
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -6,14 +6,15 @@ const ctx = canvas.getContext('2d');
 // STATE - DOUBLE HP
 let gameOn = false;
 let px = 80, py = 360, ex = 820, ey = 360;
-let pHealth = 200, eHealth = 200; // 200 HP!
+let pHealth = 200, eHealth = 200;
 let combo = 0, comboTimer = 0;
 let shake = 0;
 let pJump = 0, eJump = 0;
 let pCooldown = 0, eCooldown = 0;
 let particles = [];
-let pStun = 0, eStun = 0; // NEW: Stun system
-let aiState = 'chase'; // chase, block, attack
+let pStun = 0, eStun = 0;
+let aiState = 'chase';
+let damagePopups = []; // NEW: Damage numbers
 
 // Audio
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -45,12 +46,35 @@ function spawnParticles(x, y, count, color) {
     }
 }
 
+// Damage Popups
+function spawnDamagePopup(x, y, damage, isPlayer) {
+    damagePopups.push({
+        x, y,
+        damage: '-' + damage,
+        vy: -3,
+        life: 60,
+        color: isPlayer ? '#ff4444' : '#44aaff',
+        scale: 1
+    });
+}
+
 function updateParticles() {
     for (let i = particles.length-1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.life--;
         p.vx *= 0.97;
         if (p.life <= 0) particles.splice(i, 1);
+    }
+}
+
+function updateDamagePopups() {
+    for (let i = damagePopups.length-1; i >= 0; i--) {
+        const popup = damagePopups[i];
+        popup.y += popup.vy;
+        popup.vy += 0.1;
+        popup.life--;
+        popup.scale += 0.02;
+        if (popup.life <= 0) damagePopups.splice(i, 1);
     }
 }
 
@@ -72,14 +96,21 @@ function restartFight() {
 }
 
 function resetGame() {
-    pHealth = eHealth = 200; // DOUBLE HP!
+    pHealth = eHealth = 200;
     px = 80; ex = 820;
     py = ey = 360;
     combo = 0;
     pStun = eStun = 0;
     aiState = 'chase';
-    particles = []; 
+    particles = [];
+    damagePopups = [];
     pCooldown = eCooldown = 0;
+    
+    // RESET HEALTH BARS
+    document.getElementById('pHealth').style.width = '100%';
+    document.getElementById('eHealth').style.width = '100%';
+    document.querySelector('.player-hp').textContent = '200';
+    document.querySelector('.enemy-hp').textContent = '200';
 }
 
 function update() {
@@ -101,7 +132,6 @@ function update() {
         }
     }
     
-    // Jump physics
     pJump += 1;
     py += pJump;
     if (py >= 360) {
@@ -111,7 +141,7 @@ function update() {
     
     px = Math.max(10, Math.min(930, px));
     
-    // SMART ENEMY AI STATES
+    // SMART ENEMY AI
     const dist = Math.abs(ex - px);
     
     if (eStun > 0) {
@@ -119,30 +149,29 @@ function update() {
     } else if (dist > 100) {
         aiState = 'chase';
     } else if (pCooldown > 0) {
-        aiState = 'block'; // Block when player recovering
+        aiState = 'block';
     } else {
         aiState = 'attack';
     }
     
-    // Enemy actions by state
     if (aiState === 'chase') {
         ex += (px > ex ? 1 : -1) * 4.5;
     }
     
     if (eCooldown <= 0 && aiState === 'attack' && dist < 80) {
         eCooldown = 25;
-        pHealth -= 15; // Fair damage
+        pHealth -= 15;
+        spawnDamagePopup(px + 25, py + 20, 15, true);
         shake = 8;
         spawnParticles(px + 25, py + 35, 8, '#ff4444');
         playSound(190, 0.12);
-        pStun = 10; // Brief stun
+        pStun = 10;
     }
     
     if (eCooldown <= 0 && aiState === 'block' && Math.random() < 0.3) {
-        eCooldown = 15; // Block animation
+        eCooldown = 15;
     }
     
-    // Enemy jump (less aggressive)
     if (Math.random() < 0.007 && Math.abs(eJump) < 0.1) {
         eJump = -14;
     }
@@ -159,12 +188,13 @@ function update() {
     // PLAYER ATTACKS
     const hitRange = 82;
     if (keys['f'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange) {
-        if (Math.random() < 0.7 || aiState !== 'block') { // 70% hit unless blocking
+        if (Math.random() < 0.7 || aiState !== 'block') {
             eHealth -= 16;
+            spawnDamagePopup(ex + 25, ey + 20, 16, false);
             combo++;
             comboTimer = 90;
             shake = 8;
-            eStun = 8; // Enemy stunned
+            eStun = 8;
             spawnParticles(ex + 20, ey + 35, 8, '#44aaff');
             playSound(220, 0.12);
         }
@@ -175,6 +205,7 @@ function update() {
     if (keys['g'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange) {
         if (Math.random() < 0.85) {
             eHealth -= 24;
+            spawnDamagePopup(ex + 25, ey + 20, 24, false);
             combo += 2;
             comboTimer = 120;
             shake = 12;
@@ -188,23 +219,32 @@ function update() {
     
     if (keys['q'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange + 25) {
         eHealth -= 38;
+        spawnDamagePopup(ex + 25, ey + 20, 38, false);
         combo += 4;
         comboTimer = 180;
         shake = 18;
-        eStun = 25; // Long stun
+        eStun = 25;
         spawnParticles(ex + 20, ey + 20, 20, '#ff44ff');
         playSound(420, 0.3);
         pCooldown = 75;
         keys['q'] = false;
     }
     
-    // UI
+    // PERFECT UI UPDATE
     document.getElementById('pHealth').style.width = Math.max(0, pHealth) + '%';
     document.getElementById('eHealth').style.width = Math.max(0, eHealth) + '%';
+    
+    // LIVE HP NUMBERS
+    const pHpEl = document.querySelector('.player-hp');
+    const eHpEl = document.querySelector('.enemy-hp');
+    if (pHpEl) pHpEl.textContent = Math.max(0, Math.round(pHealth));
+    if (eHpEl) eHpEl.textContent = Math.max(0, Math.round(eHealth));
+    
     document.getElementById('combo').textContent = 
-        comboTimer > 0 ? `${combo} COMBO!` : 'PERFECT BALANCE';
+        comboTimer > 0 ? `${combo} COMBO!` : 'PERFECT FIGHT';
     
     updateParticles();
+    updateDamagePopups();
     
     // WIN/LOSE
     if (pHealth <= 0 || eHealth <= 0) {
@@ -228,7 +268,7 @@ function draw() {
         ctx.fillRect(i * 50, 50, 30, 30);
     }
     
-    // Clean arena floor
+    // Arena floor
     const floorGrad = ctx.createLinearGradient(0, 400, 0, 500);
     floorGrad.addColorStop(0, '#1e4a2e');
     floorGrad.addColorStop(1, '#112a1a');
@@ -254,7 +294,7 @@ function draw() {
         shake--;
     }
     
-    // Particles
+    // PARTICLES
     ctx.shadowBlur = 10;
     particles.forEach(p => {
         ctx.save();
@@ -265,11 +305,24 @@ function draw() {
         ctx.restore();
     });
     
-    // PLAYER (SMOOTH SPRITE)
+    // DAMAGE POPUPS
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    damagePopups.forEach(popup => {
+        ctx.save();
+        ctx.globalAlpha = popup.life / 60;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = popup.color;
+        ctx.fillStyle = popup.color;
+        ctx.font = `bold ${18 * popup.scale}px Arial`;
+        ctx.fillText(popup.damage, popup.x, popup.y);
+        ctx.restore();
+    });
+    
+    // PLAYER SPRITE
     ctx.shadowColor = '#44aaff';
     ctx.shadowBlur = pStun > 0 ? 5 : 15;
     
-    // Flash when stunned
     ctx.fillStyle = pStun > 0 ? '#888' : '#44aaff';
     ctx.fillRect(px + 12, py - 8, 26, 28); // Head
     
@@ -277,10 +330,10 @@ function draw() {
     ctx.fillRect(px + 8, py + 20, 34, 45); // Body
     
     ctx.fillStyle = pStun > 0 ? '#555' : '#0044aa';
-    ctx.fillRect(px + 10, py + 65, 12, py < 360 ? 20 : 25); // Leg 1
-    ctx.fillRect(px + 28, py + 65, 12, py < 360 ? 20 : 25); // Leg 2
+    ctx.fillRect(px + 10, py + 65, 12, py < 360 ? 20 : 25);
+    ctx.fillRect(px + 28, py + 65, 12, py < 360 ? 20 : 25);
     
-    // ENEMY (FLASH ON STUN)
+    // ENEMY SPRITE
     ctx.shadowColor = '#ff4444';
     ctx.shadowBlur = eStun > 0 ? 5 : 15;
     
@@ -304,4 +357,4 @@ function gameLoop() {
 }
 
 gameLoop();
-console.log('⚖️ 200HP | Stun/Block | 50/50 fights!');
+console.log('✅ PERFECT UI + DAMAGE POPUPS + 200HP!');
