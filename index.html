@@ -8,41 +8,51 @@
 </head>
 <body>
     <div id="gameContainer">
-        <!-- Start Menu -->
-        <div id="startMenu">
-            <h1>Fight Night</h1>
-            <button id="startBtn">Start</button>
-            <select id="difficulty">
-                <option value="easy">Easy</option>
-                <option value="med">Med</option>
-                <option value="hard">Hard</option>
-            </select>
-        </div>
-
-        <!-- Game Canvas -->
-        <canvas id="canvas" width="1200" height="600"></canvas>
-
-        <!-- UI Overlay -->
-        <div id="ui">
-            <div id="healthPlayer" class="healthbar">
-                <div id="healthFillPlayer"></div>
+        <!-- START SCREEN -->
+        <div id="startScreen">
+            <h1>🥊 FIGHT NIGHT 🥊</h1>
+            <p>Street Fighter Style - Pure JS</p>
+            <div>
+                <label>Difficulty:</label>
+                <select id="diffSelect">
+                    <option value="1">Easy</option>
+                    <option value="2" selected>Medium</option>
+                    <option value="3">Hard</option>
+                </select>
             </div>
-            <div id="healthEnemy" class="healthbar">
-                <div id="healthFillEnemy"></div>
+            <button id="playBtn">START BATTLE</button>
+            <div id="controls">
+                ←→ Move | ↑ Jump | F Punch | G Kick | Q SPECIAL
             </div>
-            <div id="comboCounter">0 HIT</div>
-            <div id="cooldownSpecial">Special Ready</div>
         </div>
 
-        <!-- End Screen -->
-        <div id="endScreen">
-            <h2 id="endMessage"></h2>
-            <button id="restartBtn">Restart</button>
+        <!-- GAME CANVAS -->
+        <canvas id="gameCanvas" width="1000" height="500"></canvas>
+
+        <!-- UI -->
+        <div id="gameUI">
+            <div class="health-container">
+                <span>PLAYER</span>
+                <div class="health-bar">
+                    <div id="playerHealth" class="health-fill"></div>
+                </div>
+            </div>
+            <div id="comboDisplay">READY</div>
+            <div class="health-container">
+                <span>ENEMY</span>
+                <div class="health-bar">
+                    <div id="enemyHealth" class="health-fill"></div>
+                </div>
+            </div>
         </div>
 
-        <!-- Pause -->
-        <div id="pauseScreen">PAUSED - P to resume</div>
+        <!-- GAME OVER -->
+        <div id="gameOverScreen">
+            <h2 id="gameOverText"></h2>
+            <button id="restartBtn">FIGHT AGAIN</button>
+        </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
