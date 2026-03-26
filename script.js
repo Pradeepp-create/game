@@ -121,7 +121,7 @@ function updateDamagePopups() {
     }
 }
 
-// Low‑HP UI helper
+// Low-HP UI helper
 function setLowHpClass(el, health) {
     const container = el.parentNode;
     if (health <= 40) {
@@ -182,11 +182,73 @@ function update() {
     pStun = Math.max(0, pStun - 1);
     eStun = Math.max(0, eStun - 1);
 
-    // 60‑second round timer
+    // 60-second round timer
     timerSeconds = Math.max(0, timerSeconds - 1 / 60);
     const s = Math.floor(timerSeconds);
     const timerEl = document.getElementById('timer');
     if (timerEl) timerEl.textContent = `TIME: ${s}`;
+
+    // TOUCH INPUT (MOBILE)
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    if (isMobile) {
+        document.getElementById('mobileControls').classList.remove('hidden');
+    }
+
+    // Virtual joystick / D-pad helper
+    const stickArea = document.getElementById('stickArea');
+    let stickTouchId = null;
+    let stickX = 0; // -1 to 1 horizontal
+
+    stickArea.addEventListener('touchstart', (e) => {
+        if (stickTouchId === null) {
+            const touch = e.touches[0];
+            stickTouchId = touch.identifier;
+        }
+    });
+
+    stickArea.addEventListener('touchmove', (e) => {
+        for (let i = 0; i < e.touches.length; i++) {
+            const t = e.touches[i];
+            if (t.identifier === stickTouchId) {
+                const rect = stickArea.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const x = t.clientX - cx;
+                const max = rect.width / 2;
+                stickX = Math.max(-1, Math.min(1, x / max));
+                e.preventDefault();
+            }
+        }
+    });
+
+    stickArea.addEventListener('touchend', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === stickTouchId) {
+                stickTouchId = null;
+                stickX = 0;
+            }
+        }
+    });
+
+    // Map touch buttons to keys
+    const touchButtons = {
+        btnJump: 'w',
+        btnPunch: 'f',
+        btnKick: 'g',
+        btnUltra: 'q',
+    };
+
+    for (const [id, key] of Object.entries(touchButtons)) {
+        const btn = document.getElementById(id);
+        btn.addEventListener('touchstart', () => {
+            keys[key] = true;
+        });
+        btn.addEventListener('touchend', () => {
+            keys[key] = false;
+        });
+        // Prevent scroll when touching buttons
+        btn.addEventListener('touchmove', (e) => e.preventDefault());
+    }
 
     // END GAME ON TIME
     if (timerSeconds <= 0 && gameOn) {
@@ -194,5 +256,7 @@ function update() {
             pHealth > eHealth
                 ? 'TIME VICTORY!'
                 : eHealth > pHealth
-                  ? 'TIME DEFEAT'
-                  : 'TIME DRAW
+                ? 'TIME DEFEAT'
+                : 'TIME DRAW';
+    }
+}
