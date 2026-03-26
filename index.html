@@ -22,22 +22,29 @@
         <!-- FIGHT ARENA -->
         <canvas id="canvas" width="1000" height="500"></canvas>
 
+        <!-- TIME DISPLAY -->
+        <div id="timer">TIME: 60</div>
+
         <!-- PREMIUM HUD -->
         <div id="hud" class="hidden">
             <div class="fighter-panel">
                 <div class="fighter-name">RYU</div>
                 <div class="health-container player-health-container">
-                    <div id="pHealth" class="health-fill"></div>
+                    <div id="pHealth" class="health-fill">
+                        <span class="health-warning">LOW HP</span>
+                    </div>
                     <div class="health-numbers player-hp">200</div>
                 </div>
             </div>
-            
+
             <div id="combo" class="combo-display">PERFECT FIGHT</div>
-            
+
             <div class="fighter-panel">
                 <div class="fighter-name">AKUMA</div>
                 <div class="health-container enemy-health-container">
-                    <div id="eHealth" class="health-fill"></div>
+                    <div id="eHealth" class="health-fill">
+                        <span class="health-warning">LOW HP</span>
+                    </div>
                     <div class="health-numbers enemy-hp">200</div>
                 </div>
             </div>
@@ -49,7 +56,7 @@
             <button class="neon-btn" onclick="restartFight()">REMATCH</button>
         </div>
     </div>
-    
+
     <script src="script.js"></script>
 </body>
 </html>
