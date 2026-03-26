@@ -10,14 +10,14 @@ function load(src) {
     return img;
 }
 
-const playerIdle = load("assets/player_idle.png");
-const playerWalk = load("assets/player_walk.png");
-const playerPunch = load("assets/player_punch.png");
+const playerIdle = load("player_idle.png");
+const playerWalk = load("player_walk.png");
+const playerPunch = load("player_punch.png");
 
-const enemyIdle = load("assets/enemy_idle.png");
-const enemyWalk = load("assets/enemy_walk.png");
+const enemyIdle = load("enemy_idle.png");
+const enemyWalk = load("enemy_walk.png");
 
-const bgImg = load("assets/bg.png");
+const bgImg = load("bg.png");
 
 // POSITIONS
 let px, py, pvx, pvy;
