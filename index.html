@@ -1,73 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🥊 FIGHT NIGHT PRO 🥊</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>FIGHT NIGHT PRO MAX</title>
+<link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <!-- MOBILE TOUCH CONTROLS -->
-    <div id="mobileControls" class="hidden">
-        <div class="stick-area" id="stickArea"></div>
-        <div class="action-buttons">
-            <button class="touch-btn" id="btnJump">JUMP</button>
-            <button class="touch-btn" id="btnPunch">PUNCH</button>
-            <button class="touch-btn" id="btnKick">KICK</button>
-            <button class="touch-btn ultra-btn" id="btnUltra">ULTRA</button>
-        </div>
+
+<div id="startScreen">
+    <h1>FIGHT NIGHT PRO</h1>
+    <button id="startBtn">START</button>
+</div>
+
+<canvas id="canvas" width="1000" height="500"></canvas>
+
+<div id="hud">
+    <div class="bar">
+        <div id="pHealth"></div>
+        <span id="pHPText">200</span>
     </div>
 
-    <div id="container">
-        <!-- START SCREEN -->
-        <div id="startScreen">
-            <div class="neon-title">🥊 FIGHT NIGHT PRO 🥊</div>
-            <p class="neon-text">PERFECT BALANCE | 200HP | STUN/BLOCK</p>
-            <div class="controls">
-                ←→ A/D Move | ↑ W Jump | F Punch | G Kick | Q ULTRA<br>
-                <small>Land combos → Enemy STUNNED → WIN!</small>
-            </div>
-            <button class="neon-btn" id="startBtn">ENTER ARENA</button>
-        </div>
+    <div id="comboText">FIGHT!</div>
 
-        <!-- FIGHT ARENA -->
-        <canvas id="canvas" width="1000" height="500"></canvas>
-
-        <!-- TIME DISPLAY -->
-        <div id="timer">TIME: 60</div>
-
-        <!-- PREMIUM HUD -->
-        <div id="hud" class="hidden">
-            <div class="fighter-panel">
-                <div class="fighter-name">RYU</div>
-                <div class="health-container player-health-container">
-                    <div id="pHealth" class="health-fill">
-                        <span class="health-warning">LOW HP</span>
-                    </div>
-                    <div class="health-numbers player-hp">200</div>
-                </div>
-            </div>
-
-            <div id="combo" class="combo-display">PERFECT FIGHT</div>
-
-            <div class="fighter-panel">
-                <div class="fighter-name">AKUMA</div>
-                <div class="health-container enemy-health-container">
-                    <div id="eHealth" class="health-fill">
-                        <span class="health-warning">LOW HP</span>
-                    </div>
-                    <div class="health-numbers enemy-hp">200</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- GAME OVER -->
-        <div id="gameOver" class="hidden">
-            <div class="neon-title" id="result">BATTLE END</div>
-            <button class="neon-btn" id="restartBtn">REMATCH</button>
-        </div>
+    <div class="bar">
+        <div id="eHealth"></div>
+        <span id="eHPText">200</span>
     </div>
+</div>
 
-    <script src="script.js"></script>
+<div id="timer">99</div>
+
+<script src="script.js"></script>
 </body>
 </html>
