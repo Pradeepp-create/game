@@ -7,10 +7,8 @@ const ctx = canvas.getContext('2d');
 let gameOn = false;
 
 // Positions
-let px = 80,
-    py = 360;
-let ex = 820,
-    ey = 360;
+let px = 80, py = 360;
+let ex = 820, ey = 360;
 
 // HP (still 200 base)
 let pHealth = 200;
@@ -172,6 +170,85 @@ function resetGame() {
     document.getElementById('timer').textContent = 'TIME: 60';
 }
 
+// MOBILE CONTROLS SETUP
+function setupMobileControls() {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    if (isMobile) {
+        document.getElementById('mobileControls').classList.remove('hidden');
+    }
+
+    // Virtual joystick
+    const stickArea = document.getElementById('stickArea');
+    let stickTouchId = null;
+    let stickX = 0;
+
+    stickArea.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (stickTouchId === null) {
+            const touch = e.touches[0];
+            stickTouchId = touch.identifier;
+        }
+    }, { passive: false });
+
+    stickArea.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.touches.length; i++) {
+            const t = e.touches[i];
+            if (t.identifier === stickTouchId) {
+                const rect = stickArea.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const x = t.clientX - cx;
+                const max = rect.width / 2;
+                stickX = Math.max(-1, Math.min(1, x / max));
+                break;
+            }
+        }
+    }, { passive: false });
+
+    stickArea.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === stickTouchId) {
+                stickTouchId = null;
+                stickX = 0;
+                break;
+            }
+        }
+    }, { passive: false });
+
+    // Touch buttons (desktop + mobile)
+    const touchButtons = {
+        btnJump: 'w',
+        btnPunch: 'f',
+        btnKick: 'g',
+        btnUltra: 'q',
+    };
+
+    for (const [id, key] of Object.entries(touchButtons)) {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('mousedown', () => keys[key] = true);
+            btn.addEventListener('mouseup', () => keys[key] = false);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[key] = true;
+            }, { passive: false });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[key] = false;
+            }, { passive: false });
+            btn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                keys[key] = false;
+            }, { passive: false });
+        }
+    }
+
+    // Expose stickX globally for game logic
+    window.getStickX = () => stickX;
+}
+
 function update() {
     if (!gameOn) return;
 
@@ -188,75 +265,34 @@ function update() {
     const timerEl = document.getElementById('timer');
     if (timerEl) timerEl.textContent = `TIME: ${s}`;
 
-    // TOUCH INPUT (MOBILE)
-    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-    if (isMobile) {
-        document.getElementById('mobileControls').classList.remove('hidden');
-    }
-
-    // Virtual joystick / D-pad helper
-    const stickArea = document.getElementById('stickArea');
-    let stickTouchId = null;
-    let stickX = 0; // -1 to 1 horizontal
-
-    stickArea.addEventListener('touchstart', (e) => {
-        if (stickTouchId === null) {
-            const touch = e.touches[0];
-            stickTouchId = touch.identifier;
-        }
-    });
-
-    stickArea.addEventListener('touchmove', (e) => {
-        for (let i = 0; i < e.touches.length; i++) {
-            const t = e.touches[i];
-            if (t.identifier === stickTouchId) {
-                const rect = stickArea.getBoundingClientRect();
-                const cx = rect.left + rect.width / 2;
-                const x = t.clientX - cx;
-                const max = rect.width / 2;
-                stickX = Math.max(-1, Math.min(1, x / max));
-                e.preventDefault();
-            }
-        }
-    });
-
-    stickArea.addEventListener('touchend', (e) => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === stickTouchId) {
-                stickTouchId = null;
-                stickX = 0;
-            }
-        }
-    });
-
-    // Map touch buttons to keys
-    const touchButtons = {
-        btnJump: 'w',
-        btnPunch: 'f',
-        btnKick: 'g',
-        btnUltra: 'q',
-    };
-
-    for (const [id, key] of Object.entries(touchButtons)) {
-        const btn = document.getElementById(id);
-        btn.addEventListener('touchstart', () => {
-            keys[key] = true;
-        });
-        btn.addEventListener('touchend', () => {
-            keys[key] = false;
-        });
-        // Prevent scroll when touching buttons
-        btn.addEventListener('touchmove', (e) => e.preventDefault());
-    }
-
     // END GAME ON TIME
     if (timerSeconds <= 0 && gameOn) {
+        gameOn = false;
+        document.getElementById('gameOver').classList.remove('hidden');
         document.getElementById('result').textContent =
             pHealth > eHealth
                 ? 'TIME VICTORY!'
                 : eHealth > pHealth
                 ? 'TIME DEFEAT'
                 : 'TIME DRAW';
+        document.getElementById('hud').classList.add('hidden');
     }
 }
+
+function gameLoop() {
+    update();
+    requestAnimationFrame(gameLoop);
+}
+
+// INITIALIZE ON LOAD
+document.addEventListener('DOMContentLoaded', function() {
+    // START/RESTART BUTTONS
+    document.getElementById('startBtn').addEventListener('click', startFight);
+    document.getElementById('restartBtn').addEventListener('click', restartFight);
+
+    // Setup mobile controls
+    setupMobileControls();
+    
+    // Start game loop
+    gameLoop();
+});
