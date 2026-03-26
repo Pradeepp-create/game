@@ -36,14 +36,21 @@ let eCooldown = 0;
 let pStun = 0;
 let eStun = 0;
 
+// Animations
+let pAnim = 0, eAnim = 0;
+
 // Enemy AI
-let aiState = 'chase'; // chase, block, attack_punch, attack_kick, attack_special, stun
+let aiState = 'chase';
 
 // Visual FX
 let particles = [];
 let damagePopups = [];
 
-// Audio setup
+// Input
+const keys = {};
+let stickX = 0;
+
+// Audio
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(freq, duration, volume = 0.25) {
@@ -60,7 +67,7 @@ function playSound(freq, duration, volume = 0.25) {
     } catch (e) {}
 }
 
-// Particle system
+// PARTICLES
 function spawnParticles(x, y, count, color) {
     for (let i = 0; i < count; i++) {
         particles.push({
@@ -96,7 +103,7 @@ function updateParticles() {
     }
 }
 
-// Damage number popups
+// DAMAGE POPUPS
 function spawnDamagePopup(x, y, damage, isPlayer) {
     damagePopups.push({
         x, y,
@@ -119,7 +126,7 @@ function updateDamagePopups() {
     }
 }
 
-// Low-HP UI helper
+// UI HELPERS
 function setLowHpClass(el, health) {
     const container = el.parentNode;
     if (health <= 40) {
@@ -129,12 +136,72 @@ function setLowHpClass(el, health) {
     }
 }
 
-// Input handler
-const keys = {};
-document.addEventListener('keydown', (e) => (keys[e.key] = true));
-document.addEventListener('keyup', (e) => (keys[e.key] = false));
+function updateHealthUI() {
+    const pFill = document.getElementById('pHealth');
+    const eFill = document.getElementById('eHealth');
+    const pNum = document.querySelector('.player-hp');
+    const eNum = document.querySelector('.enemy-hp');
+    
+    pFill.style.width = (pHealth / 2) + '%';
+    eFill.style.width = (eHealth / 2) + '%';
+    pNum.textContent = pHealth;
+    eNum.textContent = eHealth;
+    
+    setLowHpClass(pFill, pHealth);
+    setLowHpClass(eFill, eHealth);
+}
 
-// START GAME
+// INPUT
+document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+window.getStickX = () => stickX;
+
+// MOBILE SETUP
+function setupMobileControls() {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (isMobile) document.getElementById('mobileControls').classList.remove('hidden');
+
+    const stickArea = document.getElementById('stickArea');
+    let stickTouchId = null;
+
+    stickArea.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (stickTouchId === null) stickTouchId = e.touches[0].identifier;
+    }, { passive: false });
+
+    stickArea.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for (let touch of e.touches) {
+            if (touch.identifier === stickTouchId) {
+                const rect = stickArea.getBoundingClientRect();
+                const x = touch.clientX - (rect.left + rect.width / 2);
+                stickX = Math.max(-1, Math.min(1, x / (rect.width / 2)));
+                break;
+            }
+        }
+    }, { passive: false });
+
+    stickArea.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        stickTouchId = null;
+        stickX = 0;
+    }, { passive: false });
+
+    // Touch buttons
+    ['btnJump', 'btnPunch', 'btnKick', 'btnUltra'].forEach((id, i) => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            const keyMap = ['w', 'f', 'g', 'q'][i];
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyMap] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyMap] = false; });
+            btn.addEventListener('mousedown', () => keys[keyMap] = true);
+            btn.addEventListener('mouseup', () => keys[keyMap] = false);
+        }
+    });
+}
+
+// GAME LOGIC
 function startFight() {
     gameOn = true;
     document.getElementById('startScreen').classList.add('hidden');
@@ -148,151 +215,194 @@ function restartFight() {
 }
 
 function resetGame() {
-    pHealth = 200;
-    eHealth = 200;
-    px = 80;
-    ex = 820;
-    py = ey = 360;
-    combo = 0;
-    comboTimer = 0;
+    pHealth = eHealth = 200;
+    px = 80; ex = 820; py = ey = 360;
+    combo = comboTimer = 0;
     timerSeconds = 60;
-    pStun = eStun = 0;
+    pStun = eStun = pCooldown = eCooldown = 0;
     aiState = 'chase';
-    particles = [];
-    damagePopups = [];
-    pCooldown = eCooldown = 0;
-
-    // Reset UI
-    document.getElementById('pHealth').style.width = '100%';
-    document.getElementById('eHealth').style.width = '100%';
-    document.querySelector('.player-hp').textContent = '200';
-    document.querySelector('.enemy-hp').textContent = '200';
+    particles = []; damagePopups = [];
+    updateHealthUI();
     document.getElementById('timer').textContent = 'TIME: 60';
-}
-
-// MOBILE CONTROLS SETUP
-function setupMobileControls() {
-    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    
-    if (isMobile) {
-        document.getElementById('mobileControls').classList.remove('hidden');
-    }
-
-    // Virtual joystick
-    const stickArea = document.getElementById('stickArea');
-    let stickTouchId = null;
-    let stickX = 0;
-
-    stickArea.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (stickTouchId === null) {
-            const touch = e.touches[0];
-            stickTouchId = touch.identifier;
-        }
-    }, { passive: false });
-
-    stickArea.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        for (let i = 0; i < e.touches.length; i++) {
-            const t = e.touches[i];
-            if (t.identifier === stickTouchId) {
-                const rect = stickArea.getBoundingClientRect();
-                const cx = rect.left + rect.width / 2;
-                const x = t.clientX - cx;
-                const max = rect.width / 2;
-                stickX = Math.max(-1, Math.min(1, x / max));
-                break;
-            }
-        }
-    }, { passive: false });
-
-    stickArea.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === stickTouchId) {
-                stickTouchId = null;
-                stickX = 0;
-                break;
-            }
-        }
-    }, { passive: false });
-
-    // Touch buttons (desktop + mobile)
-    const touchButtons = {
-        btnJump: 'w',
-        btnPunch: 'f',
-        btnKick: 'g',
-        btnUltra: 'q',
-    };
-
-    for (const [id, key] of Object.entries(touchButtons)) {
-        const btn = document.getElementById(id);
-        if (btn) {
-            btn.addEventListener('mousedown', () => keys[key] = true);
-            btn.addEventListener('mouseup', () => keys[key] = false);
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keys[key] = true;
-            }, { passive: false });
-            btn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                keys[key] = false;
-            }, { passive: false });
-            btn.addEventListener('touchcancel', (e) => {
-                e.preventDefault();
-                keys[key] = false;
-            }, { passive: false });
-        }
-    }
-
-    // Expose stickX globally for game logic
-    window.getStickX = () => stickX;
 }
 
 function update() {
     if (!gameOn) return;
 
-    // Decrement timers
+    // Timers
     comboTimer = Math.max(0, comboTimer - 1);
     pCooldown = Math.max(0, pCooldown - 1);
     eCooldown = Math.max(0, eCooldown - 1);
     pStun = Math.max(0, pStun - 1);
     eStun = Math.max(0, eStun - 1);
+    timerSeconds = Math.max(0, timerSeconds - 1/60);
 
-    // 60-second round timer
-    timerSeconds = Math.max(0, timerSeconds - 1 / 60);
-    const s = Math.floor(timerSeconds);
-    const timerEl = document.getElementById('timer');
-    if (timerEl) timerEl.textContent = `TIME: ${s}`;
+    // Update timer display
+    document.getElementById('timer').textContent = `TIME: ${Math.floor(timerSeconds)}`;
 
-    // END GAME ON TIME
-    if (timerSeconds <= 0 && gameOn) {
+    // PLAYER MOVEMENT
+    if (!pStun && keys['a']) px = Math.max(0, px - 3);
+    if (!pStun && keys['d']) px = Math.min(900, px + 3);
+    if (!pStun && keys['w'] && pJump === 0) { pJump = 14; playSound(400, 0.1); }
+
+    // JUMP
+    pJump = Math.max(0, pJump - 0.8);
+    py = 360 - pJump * 8;
+
+    // ENEMY AI (simple chase)
+    if (!eStun) {
+        if (ex > px + 60) ex -= 1.5;
+        if (ex < px + 60) ex += 1;
+        if (Math.random() < 0.02) eJump = 12;
+    }
+    eJump = Math.max(0, eJump - 0.8);
+    ey = 360 - eJump * 8;
+
+    // ATTACKS
+    if (keys['f'] && pCooldown === 0) { // Punch
+        if (Math.abs(px - ex) < 80) {
+            eHealth -= 10;
+            spawnHitSpark(ex, ey, '#ffff00');
+            spawnDamagePopup(ex, ey - 20, 10, false);
+            playSound(200, 0.1, 0.3);
+            eStun = 30;
+            combo++;
+            comboTimer = 120;
+        }
+        pCooldown = 20;
+        pAnim = 10;
+    }
+
+    if (keys['g'] && pCooldown === 0) { // Kick
+        if (Math.abs(px - ex) < 100) {
+            eHealth -= 15;
+            spawnHitSpark(ex, ey, '#ff6600');
+            spawnDamagePopup(ex, ey - 20, 15, false);
+            playSound(180, 0.15, 0.4);
+            eStun = 45;
+            combo++;
+            comboTimer = 120;
+        }
+        pCooldown = 30;
+        pAnim = 15;
+    }
+
+    // Update health UI
+    updateHealthUI();
+
+    // Game over conditions
+    if (timerSeconds <= 0 || pHealth <= 0 || eHealth <= 0) {
         gameOn = false;
         document.getElementById('gameOver').classList.remove('hidden');
-        document.getElementById('result').textContent =
-            pHealth > eHealth
-                ? 'TIME VICTORY!'
-                : eHealth > pHealth
-                ? 'TIME DEFEAT'
-                : 'TIME DRAW';
         document.getElementById('hud').classList.add('hidden');
+        document.getElementById('result').textContent = 
+            pHealth <= 0 ? 'DEFEAT!' :
+            eHealth <= 0 ? 'KO VICTORY!' :
+            pHealth > eHealth ? 'TIME VICTORY!' : 'TIME DRAW!';
     }
+
+    // Update effects
+    updateParticles();
+    updateDamagePopups();
+    pAnim = Math.max(0, pAnim - 1);
+    eAnim = Math.max(0, eAnim - 1);
 }
 
+// RENDER FIGHTERS + EFFECTS
+function render() {
+    // Clear with shake
+    ctx.save();
+    if (shake > 0) {
+        ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+        shake--;
+    }
+    
+    ctx.fillStyle = '#0a0a15';
+    ctx.fillRect(0, 0, 1000, 500);
+
+    // GROUND
+    ctx.fillStyle = '#2a2a3a';
+    ctx.fillRect(0, 380, 1000, 120);
+
+    // PLAYER (RYU - Blue gi)
+    ctx.fillStyle = pStun ? '#666' : '#4488ff';
+    ctx.fillRect(px - 25, py - 60, 50, 80); // Body
+    ctx.fillStyle = '#77aaff';
+    ctx.fillRect(px - 15, py - 80, 30, 25); // Head
+    ctx.fillStyle = pStun ? '#999' : '#ffffff';
+    ctx.fillRect(px - 8, py - 75, 6, 8); // Eye
+    ctx.fillRect(px + 2, py - 75, 6, 8);
+
+    // Arms (punch anim)
+    if (pAnim > 5) {
+        ctx.fillStyle = '#3366cc';
+        ctx.fillRect(px - 35, py - 40, 25, 15); // Punch arm
+    } else {
+        ctx.fillStyle = '#3366cc';
+        ctx.fillRect(px - 20, py - 40, 15, 20); // Idle arm
+    }
+
+    // Legs (kick anim)
+    if (pAnim > 8) {
+        ctx.fillStyle = '#2244aa';
+        ctx.fillRect(px - 15, py + 20, 12, 35); // Kick leg
+        ctx.fillRect(px + 3, py + 20, 12, 25);  // Other leg
+    } else {
+        ctx.fillRect(px - 12, py + 20, 10, 30);
+        ctx.fillRect(px + 2, py + 20, 10, 30);
+    }
+
+    // ENEMY (AKUMA - Red gi)
+    ctx.fillStyle = eStun ? '#666' : '#cc4444';
+    ctx.fillRect(ex - 25, ey - 60, 50, 80); // Body
+    ctx.fillStyle = '#ff6666';
+    ctx.fillRect(ex - 15, ey - 80, 30, 25); // Head
+    ctx.fillStyle = eStun ? '#999' : '#ffaaaa';
+    ctx.fillRect(ex - 8, ey - 75, 6, 8); // Eye
+    ctx.fillRect(ex + 2, ey - 75, 6, 8);
+
+    // Enemy arms/legs (mirror)
+    ctx.fillStyle = '#aa3333';
+    ctx.fillRect(ex + 5, ey - 40, 15, 20);
+    ctx.fillRect(ex - 12, ey + 20, 10, 30);
+    ctx.fillRect(ex + 2, ey + 20, 10, 30);
+
+    // PARTICLES
+    particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.life / 30;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+        ctx.restore();
+    });
+
+    // DAMAGE POPUPS
+    damagePopups.forEach(popup => {
+        ctx.save();
+        ctx.globalAlpha = popup.life / 60;
+        ctx.translate(popup.x, popup.y);
+        ctx.scale(popup.scale, popup.scale);
+        ctx.fillStyle = popup.color;
+        ctx.font = 'bold 20px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText(popup.damage, 0, 0);
+        ctx.restore();
+    });
+
+    ctx.restore();
+}
+
+// GAME LOOP
 function gameLoop() {
     update();
+    render();
     requestAnimationFrame(gameLoop);
 }
 
-// INITIALIZE ON LOAD
-document.addEventListener('DOMContentLoaded', function() {
-    // START/RESTART BUTTONS
+// INIT
+document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('startBtn').addEventListener('click', startFight);
     document.getElementById('restartBtn').addEventListener('click', restartFight);
-
-    // Setup mobile controls
     setupMobileControls();
-    
-    // Start game loop
     gameLoop();
 });
