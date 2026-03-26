@@ -255,3 +255,41 @@ canvas {
     text-shadow: 0 0 10px rgba(100, 140, 255, 0.6);
     z-index: 2;
 }
+/* MOBILE CONTROLS */
+#mobileControls {
+    display: flex;
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    justify-content: space-between;
+    padding: 0 20px 20px 20px;
+    pointer-events: none;
+    font-family: Arial, sans-serif;
+}
+
+.stick-area {
+    width: 160px;
+    height: 160px;
+    background: rgba(60, 80, 160, 0.2);
+    border: 2px solid #5566ff;
+    border-radius: 80px;
+    pointer-events: auto;
+}
+
+.touch-btn {
+    width: 70px;
+    height: 70px;
+    border-radius: 36px;
+    border: none;
+    background: rgba(66, 100, 255, 0.85);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 0 12px rgba(66, 120, 255, 0.7);
+    pointer-events: auto;
+}
+
+.touch-btn:active { transform: scale(0.95); }
+
+.ultra-btn { background: rgba(220, 60, 120, 0.9); }
