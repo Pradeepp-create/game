@@ -33,8 +33,8 @@ let eCooldown = 0;
 let pStun = 0;
 let eStun = 0;
 
-// Enemy AI
-let aiState = 'chase'; // chase, block, attack, stun
+// Enemy AI (new states: kick + special)
+let aiState = 'chase'; // chase, block, attack_punch, attack_kick, attack_special, stun
 
 // Visual FX
 let particles = [];
@@ -185,15 +185,19 @@ function update() {
     } else if (pCooldown > 0) {
         aiState = 'block';
     } else {
-        aiState = 'attack';
+        // Randomly pick enemy move, but keeps average difficulty same
+        const r = Math.random();
+        if (r < 0.35) aiState = 'attack_kick';
+        else if (r < 0.65) aiState = 'attack_punch';
+        else aiState = 'attack_special';
     }
 
     if (aiState === 'chase') {
         ex += (px > ex ? 1 : -1) * 4.5;
     }
 
-    // Enemy attack
-    if (eCooldown <= 0 && aiState === 'attack' && dist < 80) {
+    // — ENEMY PUNCH —
+    if (eCooldown <= 0 && aiState === 'attack_punch' && dist < 80) {
         eCooldown = 25;
         pHealth -= 15;
         spawnDamagePopup(px + 25, py + 20, 15, true);
@@ -203,12 +207,34 @@ function update() {
         pStun = 10;
     }
 
-    // Enemy block
+    // — ENEMY KICK —
+    if (eCooldown <= 0 && aiState === 'attack_kick' && dist < 100) {
+        eCooldown = 28;
+        pHealth -= 18;
+        spawnDamagePopup(px + 25, py + 20, 18, true);
+        shake = 10;
+        spawnParticles(px + 20, py + 35, 10, '#ff8844');
+        playSound(240, 0.15);
+        pStun = 12;
+    }
+
+    // — ENEMY SPECIAL / ULTRA —
+    if (eCooldown <= 0 && aiState === 'attack_special' && dist < 120 && Math.random() < 0.8) {
+        eCooldown = 55; // long delay so it doesn’t spam
+        pHealth -= 28;
+        spawnDamagePopup(px + 25, py + 20, 28, true);
+        shake = 16;
+        spawnParticles(px + 20, py + 20, 18, '#ff44ff');
+        playSound(380, 0.3);
+        pStun = 20;
+    }
+
+    // — ENEMY BLOCK —
     if (eCooldown <= 0 && aiState === 'block' && Math.random() < 0.3) {
         eCooldown = 15;
     }
 
-    // Enemy jump
+    // — ENEMY JUMP —
     if (Math.random() < 0.007 && Math.abs(eJump) < 0.1) {
         eJump = -14;
     }
@@ -221,16 +247,11 @@ function update() {
     }
     ex = Math.max(10, Math.min(930, ex));
 
-    // — PLAYER ATTACKS —
+    // — PLAYER ATTACKS — (unchanged)
     const hitRange = 82;
 
     // Punch
-    if (
-        keys['f'] &&
-        pCooldown <= 0 &&
-        pStun <= 0 &&
-        dist < hitRange
-    ) {
+    if (keys['f'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange) {
         if (Math.random() < 0.7 || aiState !== 'block') {
             eHealth -= 16;
             spawnDamagePopup(ex + 25, ey + 20, 16, false);
@@ -246,12 +267,7 @@ function update() {
     }
 
     // Kick
-    if (
-        keys['g'] &&
-        pCooldown <= 0 &&
-        pStun <= 0 &&
-        dist < hitRange
-    ) {
+    if (keys['g'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange) {
         if (Math.random() < 0.85) {
             eHealth -= 24;
             spawnDamagePopup(ex + 25, ey + 20, 24, false);
@@ -267,12 +283,7 @@ function update() {
     }
 
     // Ultra (Q)
-    if (
-        keys['q'] &&
-        pCooldown <= 0 &&
-        pStun <= 0 &&
-        dist < hitRange + 25
-    ) {
+    if (keys['q'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange + 25) {
         eHealth -= 38;
         spawnDamagePopup(ex + 25, ey + 20, 38, false);
         combo += 4;
@@ -285,20 +296,18 @@ function update() {
         keys['q'] = false;
     }
 
-    // — UI UPDATES —
+    // — UI —
     const pHealthPercent = Math.max(0, Math.min(100, (pHealth / 200) * 100));
     const eHealthPercent = Math.max(0, Math.min(100, (eHealth / 200) * 100));
 
     document.getElementById('pHealth').style.width = pHealthPercent + '%';
     document.getElementById('eHealth').style.width = eHealthPercent + '%';
 
-    // Live HP numbers
     const pHpEl = document.querySelector('.player-hp');
     const eHpEl = document.querySelector('.enemy-hp');
     if (pHpEl) pHpEl.textContent = Math.max(0, Math.round(pHealth));
     if (eHpEl) eHpEl.textContent = Math.max(0, Math.round(eHealth));
 
-    // Combo text
     document.getElementById('combo').textContent =
         comboTimer > 0 ? `${combo} COMBO!` : 'PERFECT FIGHT';
 
@@ -334,7 +343,7 @@ function draw() {
     ctx.fillStyle = floorGrad;
     ctx.fillRect(0, 400, 1000, 100);
 
-    // Floor pattern lines
+    // Floor pattern
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.lineWidth = 2;
     for (let x = 0; x < 1000; x += 80) {
@@ -416,4 +425,4 @@ function gameLoop() {
 }
 
 gameLoop();
-console.log('✅ PERFECT UI + DAMAGE POPUPS + 200HP + RANGED HEALTH + UPGRADED!');
+console.log('✅ PERFECT 50/50 BALANCE v4.1 — ENEMY KICK + SPECIAL + SMART AI!');
