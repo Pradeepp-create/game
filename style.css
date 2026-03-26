@@ -5,12 +5,9 @@
 }
 
 body {
-    background: radial-gradient(circle at center, #0a0a1f 0%, #111126 100%);
-    font-family: 'Courier New', monospace;
-    color: #d0e0ff;
-    overflow: hidden;
-    height: 100vh;
-    touch-action: none;
+    background: #0f172a;
+    font-family: 'Segoe UI', sans-serif;
+    color: #e5e7eb;
 }
 
 #container {
@@ -77,25 +74,14 @@ canvas {
 
 /* BUTTON */
 .neon-btn {
-    background: linear-gradient(45deg, #4466ee, #5588ff);
-    color: white;
-    border: none;
-    padding: 14px 40px;
-    font-size: 1.3em;
-    font-weight: bold;
-    border-radius: 30px;
-    cursor: pointer;
-    box-shadow: 0 0 25px rgba(66, 120, 255, 0.5);
-    transition: all 0.2s ease;
-    font-family: inherit;
+    background: #2563eb;
+    border-radius: 8px;
+    box-shadow: none;
 }
 
-.neon-btn:hover,
-.neon-btn:active {
-    transform: translateY(-3px) scale(1.03);
-    box-shadow: 0 0 35px rgba(66, 140, 255, 0.7);
+.neon-btn:hover {
+    background: #1d4ed8;
 }
-
 /* HUD */
 #hud {
     position: absolute;
@@ -155,6 +141,9 @@ canvas {
 .health-container.enemy-health-container {
     border-color: #883333;
 }
+.enemy-health-container .health-fill {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
 
 .health-container.low-hp {
     border: 2px solid #cc4444;
@@ -162,13 +151,7 @@ canvas {
 }
 
 .health-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #5588ff, #77aaff);
-    box-shadow: 0 0 12px rgba(88, 140, 255, 0.6);
-    border-radius: 10px;
-    transition: width 0.4s cubic-bezier(0.3, 0.4, 0.3, 1);
-    position: relative;
-    overflow: hidden;
+    background: linear-gradient(90deg, #22c55e, #4ade80);
 }
 
 .health-fill::before {
