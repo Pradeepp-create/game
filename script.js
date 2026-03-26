@@ -23,6 +23,7 @@ let pBlock = 0, eBlock = 0;
 let pHitstun = 0, eHitstun = 0;
 let pCooldowns = { punch: 0, kick: 0, special: 0, block: 0 };
 let eCooldowns = { punch: 0, kick: 0, special: 0, block: 0 };
+let dashCooldown = 0;
 
 // Animations
 let pAnimFrame = 0, eAnimFrame = 0;
@@ -179,50 +180,65 @@ function setupMobileControls() {
     });
 }
 
-// ATTACK FUNCTIONS
 function playerAttack(type) {
+    // Block spam + stun check
     if (pCooldowns[type] > 0 || pStun > 0 || pHitstun > 0) return;
-    
+
     const attackData = {
-        punch: { dmg: 12, range: 65, stun: 25, cost: 8, anim: 8, sound: 220 },
-        kick: { dmg: 18, range: 85, stun: 35, cost: 12, anim: 12, sound: 180 },
-        special: { dmg: 35, range: 95, stun: 60, cost: 30, anim: 20, sound: 150 }
+        punch:   { dmg: 10, range: 65, stun: 20, cost: 8,  anim: 8,  sound: 220 },
+        kick:    { dmg: 16, range: 85, stun: 30, cost: 12, anim: 12, sound: 180 },
+        special: { dmg: 28, range: 95, stun: 50, cost: 30, anim: 20, sound: 150 }
     };
-    
+
     const data = attackData[type];
     if (pStamina < data.cost) return;
-    
+
+    // Apply stamina + cooldown
     pStamina -= data.cost;
     pCooldowns[type] = data.anim * 2;
     pAnimFrame = data.anim;
-    
-    // Check hit
+
+    // Check distance
     const dist = Math.hypot(px - ex, py - ey);
+
     if (dist < data.range) {
         let finalDmg = data.dmg;
-        let blockReduce = eBlock > 0 ? 0.6 : 1;
-        
+
+        // 🔥 HIT IMPACT FEEL
+        screenShakeFrames = 6;
+
+        // fake hit freeze (visual feel)
+        for (let i = 0; i < 5; i++) {
+            updateParticles();
+        }
+
+        // BLOCK SYSTEM
         if (eBlock > 0) {
+            finalDmg *= 0.4;
+
             spawnBlockSpark(ex + (px > ex ? -20 : 20), ey - 30);
             playSound(300, 0.08, 'sine', 0.15);
+
             eBlock = Math.max(0, eBlock - 10);
-        } else {
-            finalDmg *= blockReduce;
+        } 
+        else {
+            // COMBO SCALING
+            if (combo > 3) finalDmg *= 1.2;
+
             eHealth -= finalDmg;
             eHitstun = data.stun;
+
             spawnHitSpark(ex, ey - 40, '#ffaa00');
-            spawnDamagePopup(ex, ey - 50, finalDmg, finalDmg > 20);
+            spawnDamagePopup(ex, ey - 50, Math.floor(finalDmg), finalDmg > 20);
+
             playSound(data.sound, 0.12, 'sawtooth', 0.3);
-            screenShakeFrames = 8;
-            
+
             combo++;
             comboTimer = 180;
         }
-        
-        // Combo scaling
-        if (combo > 3) finalDmg *= 1.2;
     }
-    
+
+    // Swing sound even if miss
     playSound(400, 0.08);
 }
 
@@ -295,6 +311,11 @@ function updateMovement() {
     // Player input
     let moveInput = stickX || (keys['d'] ? 1 : keys['a'] ? -1 : 0);
     pvx += moveInput * 0.5;
+    // DASH (press Shift)
+    if (keys['shift'] && dashCooldown === 0) {
+        pvx += (pFacingRight ? 10 : -10);
+        dashCooldown = 30;
+    }
     
     if (keys['w'] || stickY < -0.5) {
         if (Math.abs(pvy) < 1) pvy = JUMP_POWER;
@@ -346,6 +367,7 @@ function updateMovement() {
 // CORE UPDATE
 function update() {
     if (!gameOn) return;
+    dashCooldown = Math.max(0, dashCooldown - 1);
     
     // Decrement timers
     Object.keys(pCooldowns).forEach(k => pCooldowns[k] = Math.max(0, pCooldowns[k] - 1));
@@ -387,61 +409,91 @@ function update() {
                       pHealth > eHealth ? 'TIME WIN!' : 'DRAW!';
         document.getElementById('result').textContent = result;
     }
+    if (comboTimer > 0) {
+        comboTimer--;
+    } else {
+        combo = 0;
+    }
 }
 
-// RENDERING
 function renderFighter(x, y, healthPct, isPlayer, animFrame, facingRight, stunned, blocking) {
     ctx.save();
     ctx.translate(x, y);
+
+    // Flip if facing left
     if (!facingRight) {
         ctx.scale(-1, 1);
-        ctx.translate(40, 0);
     }
-    
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+
+    // SHADOW
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.fillRect(-20, 65, 40, 10);
-    
-    // Body
-    const bodyColor = stunned ? '#666' : blocking ? '#88aaff' : 
-                     healthPct < 0.3 ? '#ff6666' : isPlayer ? '#4488ff' : '#cc4444';
+
+    // COLOR STATES
+    let bodyColor = isPlayer ? '#3b82f6' : '#ef4444';
+    if (stunned) bodyColor = '#6b7280';
+    if (blocking) bodyColor = '#60a5fa';
+
+    // BODY
     ctx.fillStyle = bodyColor;
-    ctx.fillRect(-20, -55, 40, 70);
-    
-    // Head
-    ctx.fillStyle = healthPct < 0.3 ? '#ffaaaa' : isPlayer ? '#77aaff' : '#ff6666';
-    ctx.fillRect(-12, -75, 24, 22);
-    ctx.fillStyle = stunned ? '#999' : '#ffffff';
-    ctx.fillRect(facingRight ? -6 : -18, -68, 5, 6);
-    ctx.fillRect(facingRight ? 1 : -13, -68, 5, 6);
-    
-    // Arms
-    ctx.fillStyle = bodyColor;
+    ctx.fillRect(-18, -50, 36, 60);
+
+    // HEAD
+    ctx.fillStyle = '#f1f5f9';
+    ctx.beginPath();
+    ctx.arc(0, -65, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // EYES
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(-4, -67, 2, 0, Math.PI * 2);
+    ctx.arc(4, -67, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ARMS (animated attack)
+    ctx.strokeStyle = bodyColor;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+
     if (animFrame > 5) {
-        ctx.fillRect(-35, -35, 28, 12); // Punch/Kick arm forward
+        // attack arm forward
+        ctx.moveTo(0, -35);
+        ctx.lineTo(30, -30);
     } else {
-        ctx.fillRect(-25, -35, 18, 20);
-        ctx.fillRect(7, -35, 18, 20);
+        // idle arms
+        ctx.moveTo(0, -35);
+        ctx.lineTo(15, -25);
+        ctx.moveTo(0, -35);
+        ctx.lineTo(-15, -25);
     }
-    
-    // Legs
-    ctx.fillStyle = bodyColor;
+
+    ctx.stroke();
+
+    // LEGS (simple animation)
+    ctx.beginPath();
     if (animFrame > 8) {
-        ctx.fillRect(-15, 15, 12, 40); // Kick leg
-        ctx.fillRect(3, 15, 12, 30);
+        ctx.moveTo(0, 10);
+        ctx.lineTo(15, 45); // kick leg
+        ctx.moveTo(0, 10);
+        ctx.lineTo(-10, 35);
     } else {
-        ctx.fillRect(-12, 15, 10, 35);
-        ctx.fillRect(2, 15, 10, 35);
+        ctx.moveTo(0, 10);
+        ctx.lineTo(-10, 40);
+        ctx.moveTo(0, 10);
+        ctx.lineTo(10, 40);
     }
-    
-    // Stun stars
+    ctx.stroke();
+
+    // STUN EFFECT
     if (stunned > 0) {
-        ctx.fillStyle = '#ffff00';
-        ctx.fillRect(-25, -90, 6, 6);
-        ctx.fillRect(19, -85, 6, 6);
-        ctx.fillRect(-10, -95, 6, 6);
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(-15, -85, 4, 0, Math.PI * 2);
+        ctx.arc(15, -85, 4, 0, Math.PI * 2);
+        ctx.fill();
     }
-    
+
     ctx.restore();
 }
 
