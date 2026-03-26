@@ -1,22 +1,46 @@
-console.log('⚖️ PERFECT 50/50 BALANCE v4.0 + UI');
+console.log('⚖️ PERFECT 50/50 BALANCE v4.0 + UI — UPGRADED');
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-// STATE - DOUBLE HP
+// GAME STATE
 let gameOn = false;
-let px = 80, py = 360, ex = 820, ey = 360;
-let pHealth = 200, eHealth = 200;
-let combo = 0, comboTimer = 0;
-let shake = 0;
-let pJump = 0, eJump = 0;
-let pCooldown = 0, eCooldown = 0;
-let particles = [];
-let pStun = 0, eStun = 0;
-let aiState = 'chase';
-let damagePopups = []; // NEW: Damage numbers
 
-// Audio
+// Positions
+let px = 80, py = 360;
+let ex = 820, ey = 360;
+
+// HP (still 200 base)
+let pHealth = 200;
+let eHealth = 200;
+
+// Combo logic
+let combo = 0;
+let comboTimer = 0;
+
+// Screen shake
+let shake = 0;
+
+// Jump
+let pJump = 0;
+let eJump = 0;
+
+// Cooldowns
+let pCooldown = 0;
+let eCooldown = 0;
+
+// Stun
+let pStun = 0;
+let eStun = 0;
+
+// Enemy AI
+let aiState = 'chase'; // chase, block, attack, stun
+
+// Visual FX
+let particles = [];
+let damagePopups = [];
+
+// Audio setup
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(freq, duration, volume = 0.25) {
@@ -30,23 +54,35 @@ function playSound(freq, duration, volume = 0.25) {
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
-    } catch(e) {}
+    } catch (e) {}
 }
 
-// Particles
+// Particle system
 function spawnParticles(x, y, count, color) {
     for (let i = 0; i < count; i++) {
         particles.push({
             x, y,
-            vx: (Math.random()-0.5)*10,
-            vy: Math.random()*-8,
+            vx: (Math.random() - 0.5) * 10,
+            vy: Math.random() * -8,
             life: 25,
-            color
+            color,
         });
     }
 }
 
-// Damage Popups
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.3;
+        p.life--;
+        p.vx *= 0.97;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+}
+
+// Damage number popups
 function spawnDamagePopup(x, y, damage, isPlayer) {
     damagePopups.push({
         x, y,
@@ -54,21 +90,12 @@ function spawnDamagePopup(x, y, damage, isPlayer) {
         vy: -3,
         life: 60,
         color: isPlayer ? '#ff4444' : '#44aaff',
-        scale: 1
+        scale: 1,
     });
 }
 
-function updateParticles() {
-    for (let i = particles.length-1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.life--;
-        p.vx *= 0.97;
-        if (p.life <= 0) particles.splice(i, 1);
-    }
-}
-
 function updateDamagePopups() {
-    for (let i = damagePopups.length-1; i >= 0; i--) {
+    for (let i = damagePopups.length - 1; i >= 0; i--) {
         const popup = damagePopups[i];
         popup.y += popup.vy;
         popup.vy += 0.1;
@@ -78,11 +105,12 @@ function updateDamagePopups() {
     }
 }
 
-// Input
+// Input handler
 const keys = {};
-document.addEventListener('keydown', e => keys[e.key] = true);
-document.addEventListener('keyup', e => keys[e.key] = false);
+document.addEventListener('keydown', (e) => (keys[e.key] = true));
+document.addEventListener('keyup', (e) => (keys[e.key] = false));
 
+// Start game
 function startFight() {
     gameOn = true;
     document.getElementById('startScreen').classList.add('hidden');
@@ -96,17 +124,20 @@ function restartFight() {
 }
 
 function resetGame() {
-    pHealth = eHealth = 200;
-    px = 80; ex = 820;
+    pHealth = 200;
+    eHealth = 200;
+    px = 80;
+    ex = 820;
     py = ey = 360;
     combo = 0;
+    comboTimer = 0;
     pStun = eStun = 0;
     aiState = 'chase';
     particles = [];
     damagePopups = [];
     pCooldown = eCooldown = 0;
-    
-    // RESET HEALTH BARS
+
+    // Reset UI
     document.getElementById('pHealth').style.width = '100%';
     document.getElementById('eHealth').style.width = '100%';
     document.querySelector('.player-hp').textContent = '200';
@@ -115,35 +146,38 @@ function resetGame() {
 
 function update() {
     if (!gameOn) return;
-    
+
+    // Decrement timers
     comboTimer = Math.max(0, comboTimer - 1);
     pCooldown = Math.max(0, pCooldown - 1);
     eCooldown = Math.max(0, eCooldown - 1);
     pStun = Math.max(0, pStun - 1);
     eStun = Math.max(0, eStun - 1);
-    
-    // PLAYER CONTROLS
+
+    // — PLAYER MOVEMENT —
     if (pStun <= 0) {
         const speed = 6;
         if (keys['ArrowLeft'] || keys['a']) px -= speed;
         if (keys['ArrowRight'] || keys['d']) px += speed;
-        if ((keys['ArrowUp'] || keys['w'] || keys[' ']) && Math.abs(pJump) < 0.1) {
+        if (
+            (keys['ArrowUp'] || keys['w'] || keys[' ']) &&
+            Math.abs(pJump) < 0.1
+        ) {
             pJump = -16;
         }
     }
-    
+
     pJump += 1;
     py += pJump;
     if (py >= 360) {
         py = 360;
         pJump = 0;
     }
-    
     px = Math.max(10, Math.min(930, px));
-    
-    // SMART ENEMY AI
+
+    // — ENEMY AI —
     const dist = Math.abs(ex - px);
-    
+
     if (eStun > 0) {
         aiState = 'stun';
     } else if (dist > 100) {
@@ -153,11 +187,12 @@ function update() {
     } else {
         aiState = 'attack';
     }
-    
+
     if (aiState === 'chase') {
         ex += (px > ex ? 1 : -1) * 4.5;
     }
-    
+
+    // Enemy attack
     if (eCooldown <= 0 && aiState === 'attack' && dist < 80) {
         eCooldown = 25;
         pHealth -= 15;
@@ -167,27 +202,35 @@ function update() {
         playSound(190, 0.12);
         pStun = 10;
     }
-    
+
+    // Enemy block
     if (eCooldown <= 0 && aiState === 'block' && Math.random() < 0.3) {
         eCooldown = 15;
     }
-    
+
+    // Enemy jump
     if (Math.random() < 0.007 && Math.abs(eJump) < 0.1) {
         eJump = -14;
     }
-    
+
     eJump += 1;
     ey += eJump;
     if (ey >= 360) {
         ey = 360;
         eJump = 0;
     }
-    
     ex = Math.max(10, Math.min(930, ex));
-    
-    // PLAYER ATTACKS
+
+    // — PLAYER ATTACKS —
     const hitRange = 82;
-    if (keys['f'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange) {
+
+    // Punch
+    if (
+        keys['f'] &&
+        pCooldown <= 0 &&
+        pStun <= 0 &&
+        dist < hitRange
+    ) {
         if (Math.random() < 0.7 || aiState !== 'block') {
             eHealth -= 16;
             spawnDamagePopup(ex + 25, ey + 20, 16, false);
@@ -201,8 +244,14 @@ function update() {
         pCooldown = 12;
         keys['f'] = false;
     }
-    
-    if (keys['g'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange) {
+
+    // Kick
+    if (
+        keys['g'] &&
+        pCooldown <= 0 &&
+        pStun <= 0 &&
+        dist < hitRange
+    ) {
         if (Math.random() < 0.85) {
             eHealth -= 24;
             spawnDamagePopup(ex + 25, ey + 20, 24, false);
@@ -216,8 +265,14 @@ function update() {
         pCooldown = 18;
         keys['g'] = false;
     }
-    
-    if (keys['q'] && pCooldown <= 0 && pStun <= 0 && dist < hitRange + 25) {
+
+    // Ultra (Q)
+    if (
+        keys['q'] &&
+        pCooldown <= 0 &&
+        pStun <= 0 &&
+        dist < hitRange + 25
+    ) {
         eHealth -= 38;
         spawnDamagePopup(ex + 25, ey + 20, 38, false);
         combo += 4;
@@ -229,26 +284,30 @@ function update() {
         pCooldown = 75;
         keys['q'] = false;
     }
-    
-    // PERFECT UI UPDATE
-    document.getElementById('pHealth').style.width = Math.max(0, pHealth) + '%';
-    document.getElementById('eHealth').style.width = Math.max(0, eHealth) + '%';
-    
-    // LIVE HP NUMBERS
+
+    // — UI UPDATES —
+    const pHealthPercent = Math.max(0, Math.min(100, (pHealth / 200) * 100));
+    const eHealthPercent = Math.max(0, Math.min(100, (eHealth / 200) * 100));
+
+    document.getElementById('pHealth').style.width = pHealthPercent + '%';
+    document.getElementById('eHealth').style.width = eHealthPercent + '%';
+
+    // Live HP numbers
     const pHpEl = document.querySelector('.player-hp');
     const eHpEl = document.querySelector('.enemy-hp');
     if (pHpEl) pHpEl.textContent = Math.max(0, Math.round(pHealth));
     if (eHpEl) eHpEl.textContent = Math.max(0, Math.round(eHealth));
-    
-    document.getElementById('combo').textContent = 
+
+    // Combo text
+    document.getElementById('combo').textContent =
         comboTimer > 0 ? `${combo} COMBO!` : 'PERFECT FIGHT';
-    
+
     updateParticles();
     updateDamagePopups();
-    
-    // WIN/LOSE
+
+    // — WIN / LOSE —
     if (pHealth <= 0 || eHealth <= 0) {
-        document.getElementById('result').textContent = 
+        document.getElementById('result').textContent =
             pHealth > 0 ? 'PERFECT VICTORY!' : 'NARROW DEFEAT';
         document.getElementById('gameOver').classList.remove('hidden');
         gameOn = false;
@@ -257,25 +316,25 @@ function update() {
 
 function draw() {
     ctx.clearRect(0, 0, 1000, 500);
-    
-    // Stadium background
+
+    // — STADIUM BACKGROUND —
     ctx.fillStyle = '#0a0a15';
     ctx.fillRect(0, 0, 1000, 500);
-    
-    // Crowd lights
+
+    // — CROWD LIGHTS —
     ctx.fillStyle = 'rgba(0, 255, 136, 0.1)';
     for (let i = 0; i < 20; i++) {
         ctx.fillRect(i * 50, 50, 30, 30);
     }
-    
-    // Arena floor
+
+    // — ARENA FLOOR —
     const floorGrad = ctx.createLinearGradient(0, 400, 0, 500);
     floorGrad.addColorStop(0, '#1e4a2e');
     floorGrad.addColorStop(1, '#112a1a');
     ctx.fillStyle = floorGrad;
     ctx.fillRect(0, 400, 1000, 100);
-    
-    // Floor pattern
+
+    // Floor pattern lines
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.lineWidth = 2;
     for (let x = 0; x < 1000; x += 80) {
@@ -284,7 +343,7 @@ function draw() {
         ctx.lineTo(x + 60, 420);
         ctx.stroke();
     }
-    
+
     ctx.save();
     if (shake > 0) {
         ctx.translate(
@@ -293,22 +352,22 @@ function draw() {
         );
         shake--;
     }
-    
-    // PARTICLES
+
+    // — PARTICLES —
     ctx.shadowBlur = 10;
-    particles.forEach(p => {
+    particles.forEach((p) => {
         ctx.save();
         ctx.globalAlpha = p.life / 25;
         ctx.shadowColor = p.color;
         ctx.fillStyle = p.color;
-        ctx.fillRect(p.x-2, p.y-2, 4, 4);
+        ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
         ctx.restore();
     });
-    
-    // DAMAGE POPUPS
+
+    // — DAMAGE POPUPS —
     ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'center';
-    damagePopups.forEach(popup => {
+    damagePopups.forEach((popup) => {
         ctx.save();
         ctx.globalAlpha = popup.life / 60;
         ctx.shadowBlur = 15;
@@ -318,35 +377,35 @@ function draw() {
         ctx.fillText(popup.damage, popup.x, popup.y);
         ctx.restore();
     });
-    
-    // PLAYER SPRITE
+
+    // — PLAYER —
     ctx.shadowColor = '#44aaff';
     ctx.shadowBlur = pStun > 0 ? 5 : 15;
-    
-    ctx.fillStyle = pStun > 0 ? '#888' : '#44aaff';
-    ctx.fillRect(px + 12, py - 8, 26, 28); // Head
-    
-    ctx.fillStyle = pStun > 0 ? '#666' : '#0066cc';
-    ctx.fillRect(px + 8, py + 20, 34, 45); // Body
-    
-    ctx.fillStyle = pStun > 0 ? '#555' : '#0044aa';
+
+    ctx.fillStyle = pStun > 0 ? '#888' : '#44aaff'; // Head
+    ctx.fillRect(px + 12, py - 8, 26, 28);
+
+    ctx.fillStyle = pStun > 0 ? '#666' : '#0066cc'; // Body
+    ctx.fillRect(px + 8, py + 20, 34, 45);
+
+    ctx.fillStyle = pStun > 0 ? '#555' : '#0044aa'; // Legs
     ctx.fillRect(px + 10, py + 65, 12, py < 360 ? 20 : 25);
     ctx.fillRect(px + 28, py + 65, 12, py < 360 ? 20 : 25);
-    
-    // ENEMY SPRITE
+
+    // — ENEMY —
     ctx.shadowColor = '#ff4444';
     ctx.shadowBlur = eStun > 0 ? 5 : 15;
-    
-    ctx.fillStyle = eStun > 0 ? '#888' : '#ff4444';
+
+    ctx.fillStyle = eStun > 0 ? '#888' : '#ff4444'; // Head
     ctx.fillRect(ex + 12, ey - 8, 26, 28);
-    
-    ctx.fillStyle = eStun > 0 ? '#666' : '#cc0000';
+
+    ctx.fillStyle = eStun > 0 ? '#666' : '#cc0000'; // Body
     ctx.fillRect(ex + 8, ey + 20, 34, 45);
-    
-    ctx.fillStyle = eStun > 0 ? '#555' : '#aa0000';
+
+    ctx.fillStyle = eStun > 0 ? '#555' : '#aa0000'; // Legs
     ctx.fillRect(ex + 10, ey + 65, 12, ey < 360 ? 20 : 25);
     ctx.fillRect(ex + 28, ey + 65, 12, ey < 360 ? 20 : 25);
-    
+
     ctx.restore();
 }
 
@@ -357,4 +416,4 @@ function gameLoop() {
 }
 
 gameLoop();
-console.log('✅ PERFECT UI + DAMAGE POPUPS + 200HP!');
+console.log('✅ PERFECT UI + DAMAGE POPUPS + 200HP + RANGED HEALTH + UPGRADED!');
