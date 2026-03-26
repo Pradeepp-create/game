@@ -10,12 +10,14 @@
     <!-- MOBILE TOUCH CONTROLS -->
     <div id="mobileControls" class="hidden">
         <div class="stick-area" id="stickArea"></div>
-
-        <button class="touch-btn" id="btnJump">JUMP</button>
-        <button class="touch-btn" id="btnPunch">PUNCH</button>
-        <button class="touch-btn" id="btnKick">KICK</button>
-        <button class="touch-btn ultra-btn" id="btnUltra">ULTRA</button>
+        <div class="action-buttons">
+            <button class="touch-btn" id="btnJump">JUMP</button>
+            <button class="touch-btn" id="btnPunch">PUNCH</button>
+            <button class="touch-btn" id="btnKick">KICK</button>
+            <button class="touch-btn ultra-btn" id="btnUltra">ULTRA</button>
+        </div>
     </div>
+
     <div id="container">
         <!-- START SCREEN -->
         <div id="startScreen">
@@ -25,7 +27,7 @@
                 ←→ A/D Move | ↑ W Jump | F Punch | G Kick | Q ULTRA<br>
                 <small>Land combos → Enemy STUNNED → WIN!</small>
             </div>
-            <button class="neon-btn" onclick="startFight()">ENTER ARENA</button>
+            <button class="neon-btn" id="startBtn">ENTER ARENA</button>
         </div>
 
         <!-- FIGHT ARENA -->
@@ -62,7 +64,7 @@
         <!-- GAME OVER -->
         <div id="gameOver" class="hidden">
             <div class="neon-title" id="result">BATTLE END</div>
-            <button class="neon-btn" onclick="restartFight()">REMATCH</button>
+            <button class="neon-btn" id="restartBtn">REMATCH</button>
         </div>
     </div>
 
