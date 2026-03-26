@@ -10,6 +10,7 @@ body {
     color: #d0e0ff;
     overflow: hidden;
     height: 100vh;
+    touch-action: none;
 }
 
 #container {
@@ -28,6 +29,7 @@ canvas {
     box-shadow: 0 0 20px rgba(66, 100, 255, 0.3),
                 inset 0 0 10px rgba(88, 120, 255, 0.1);
     background: #0a0a15;
+    display: block;
 }
 
 /* START SCREEN & GAME OVER */
@@ -85,9 +87,11 @@ canvas {
     cursor: pointer;
     box-shadow: 0 0 25px rgba(66, 120, 255, 0.5);
     transition: all 0.2s ease;
+    font-family: inherit;
 }
 
-.neon-btn:hover {
+.neon-btn:hover,
+.neon-btn:active {
     transform: translateY(-3px) scale(1.03);
     box-shadow: 0 0 35px rgba(66, 140, 255, 0.7);
 }
@@ -154,6 +158,7 @@ canvas {
 
 .health-container.low-hp {
     border: 2px solid #cc4444;
+    box-shadow: 0 0 15px rgba(204, 68, 68, 0.6);
 }
 
 .health-fill {
@@ -218,14 +223,13 @@ canvas {
 }
 
 /* COMBO */
-.combo-display {
+#combo {
     font-size: 22px;
     font-weight: bold;
     color: #ffffbb;
     text-shadow: 0 0 10px rgba(255, 220, 100, 0.6);
     min-width: 140px;
     text-align: center;
-    animation: comboPulse 0.5s ease-in-out;
 }
 
 @keyframes comboPulse {
@@ -255,41 +259,75 @@ canvas {
     text-shadow: 0 0 10px rgba(100, 140, 255, 0.6);
     z-index: 2;
 }
+
 /* MOBILE CONTROLS */
 #mobileControls {
-    display: flex;
-    position: absolute;
+    position: fixed;
     bottom: 20px;
     left: 0;
     width: 100%;
-    justify-content: space-between;
     padding: 0 20px 20px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
     pointer-events: none;
+    z-index: 100;
     font-family: Arial, sans-serif;
 }
 
 .stick-area {
     width: 160px;
     height: 160px;
-    background: rgba(60, 80, 160, 0.2);
-    border: 2px solid #5566ff;
+    background: rgba(60, 80, 160, 0.3);
+    border: 3px solid #5566ff;
     border-radius: 80px;
+    pointer-events: auto;
+    position: relative;
+}
+
+.stick-area::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     pointer-events: auto;
 }
 
 .touch-btn {
-    width: 70px;
-    height: 70px;
-    border-radius: 36px;
-    border: none;
-    background: rgba(66, 100, 255, 0.85);
+    width: 80px;
+    height: 80px;
+    border-radius: 40px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(66, 100, 255, 0.9);
     color: white;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
-    box-shadow: 0 0 12px rgba(66, 120, 255, 0.7);
-    pointer-events: auto;
+    box-shadow: 0 4px 15px rgba(66, 120, 255, 0.6);
+    transition: all 0.1s ease;
 }
 
-.touch-btn:active { transform: scale(0.95); }
+.touch-btn:active {
+    transform: scale(0.95);
+    background: rgba(66, 100, 255, 1);
+    box-shadow: 0 2px 10px rgba(66, 120, 255, 0.8);
+}
 
-.ultra-btn { background: rgba(220, 60, 120, 0.9); }
+.ultra-btn {
+    background: rgba(220, 60, 120, 0.9);
+    box-shadow: 0 4px 15px rgba(220, 60, 120, 0.6);
+}
+
+.ultra-btn:active {
+    background: rgba(220, 60, 120, 1);
+}
