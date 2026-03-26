@@ -1,236 +1,232 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 body {
-    background: radial-gradient(circle at center, #0a0a1f 0%, #000 100%);
-    font-family: 'Courier New', monospace;
-    color: #00ff88;
-    overflow: hidden;
-    height: 100vh;
+  background: radial-gradient(circle at center, #0a0a1f 0%, #111126 100%);
+  font-family: 'Courier New', monospace;
+  color: #d0e0ff;
+  overflow: hidden;
+  height: 100vh;
 }
 
 #container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
+/* CANVAS */
 canvas {
-    border: 4px solid #00ff88;
-    border-radius: 12px;
-    box-shadow: 
-        0 0 40px #00ff88,
-        inset 0 0 20px rgba(0,255,136,0.1);
+  border: 2px solid #5566ff;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(66, 100, 255, 0.3),
+              inset 0 0 10px rgba(88, 120, 255, 0.1);
+  background: #0a0a15;
 }
 
-#startScreen, #gameOver {
-    position: absolute;
-    background: rgba(0,10,30,0.95);
-    padding: 40px;
-    border-radius: 20px;
-    border: 2px solid #00ff88;
-    text-align: center;
-    backdrop-filter: blur(15px);
-    box-shadow: 
-        0 0 60px rgba(0,255,136,0.4),
-        inset 0 0 30px rgba(0,255,136,0.1);
+/* START SCREEN & GAME OVER */
+#startScreen,
+#gameOver {
+  position: absolute;
+  background: rgba(20, 30, 50, 0.95);
+  padding: 40px 50px;
+  border-radius: 20px;
+  border: 2px solid #5566ff;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 40px rgba(66, 100, 255, 0.4);
+  z-index: 10;
 }
 
+/* TITLES */
 .neon-title {
-    font-size: 2.8em;
-    background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00, #ffaa00);
-    background-size: 400% 400%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: none;
-    animation: neonGlow 1.5s ease-in-out infinite alternate;
-    margin-bottom: 15px;
+  font-size: 2.6em;
+  font-weight: bold;
+  color: #cde0ff;
+  text-shadow: 0 0 20px rgba(100, 140, 255, 0.6);
+  margin-bottom: 10px;
 }
 
-@keyframes neonGlow {
-    0% { 
-        background-position: 0% 50%;
-        filter: hue-rotate(0deg);
-    }
-    100% { 
-        background-position: 100% 50%;
-        filter: hue-rotate(360deg);
-    }
-}
-
+/* SMALL TEXT */
 .neon-text {
-    color: #00ff88;
-    font-size: 1.3em;
-    text-shadow: 0 0 15px #00ff88;
-    margin-bottom: 25px;
+  color: #a8c0ff;
+  font-size: 1.15em;
+  margin-bottom: 20px;
 }
 
+/* CONTROLS BOX */
 .controls {
-    background: rgba(0,255,136,0.15);
-    border: 1px solid #00ff88;
-    border-radius: 12px;
-    padding: 20px;
-    margin: 20px 0;
-    font-size: 16px;
-    text-shadow: 0 0 5px #00ff88;
+  background: rgba(60, 80, 160, 0.15);
+  border: 1px solid #5566ff;
+  border-radius: 12px;
+  padding: 16px 24px;
+  margin: 20px 0;
+  font-size: 15px;
+  color: #b8c8ff;
+  text-shadow: 0 0 6px rgba(100, 140, 255, 0.3);
+  line-height: 1.5;
 }
 
+/* BUTTON */
 .neon-btn {
-    background: linear-gradient(45deg, #ff0080, #00ff88);
-    color: white;
-    border: none;
-    padding: 18px 45px;
-    font-size: 1.4em;
-    font-weight: bold;
-    border-radius: 35px;
-    cursor: pointer;
-    text-shadow: 0 0 8px #fff;
-    box-shadow: 
-        0 0 30px #ff0080,
-        inset 0 0 25px rgba(255,255,255,0.3);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+  background: linear-gradient(45deg, #4466ee, #5588ff);
+  color: white;
+  border: none;
+  padding: 14px 40px;
+  font-size: 1.3em;
+  font-weight: bold;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(66, 120, 255, 0.5);
+  transition: all 0.2s ease;
 }
 
-.neon-btn::before {
-    content: '';
-    position: absolute;
-    top: 0; left: -100%;
-    width: 100%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-    transition: left 0.5s;
-}
-
-.neon-btn:hover::before { left: 100%; }
 .neon-btn:hover {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 
-        0 0 60px #ff0080,
-        0 0 80px #00ff88;
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 0 35px rgba(66, 140, 255, 0.7);
 }
 
+/* HUD */
 #hud {
-    position: absolute;
-    top: 25px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 80px;
-    background: rgba(5,15,35,0.95);
-    padding: 20px 40px;
-    border-radius: 25px;
-    border: 3px solid #00ff88;
-    box-shadow: 
-        0 0 50px rgba(0,255,136,0.5),
-        inset 0 0 30px rgba(0,255,136,0.2);
-    backdrop-filter: blur(20px);
-    min-width: 500px;
+  position: absolute;
+  top: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  background: rgba(20, 30, 60, 0.95);
+  padding: 16px 32px;
+  border-radius: 20px;
+  border: 2px solid #5566ff;
+  box-shadow: 0 0 30px rgba(60, 100, 255, 0.4);
+  backdrop-filter: blur(10px);
+  min-width: 440px;
+  pointer-events: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
+/* FIGHTER PANEL */
 .fighter-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
 }
 
 .fighter-name {
-    font-size: 20px;
-    font-weight: bold;
-    color: #00ffff;
-    text-shadow: 
-        0 0 10px #00ffff,
-        0 0 20px #00aaff;
-    margin-bottom: 12px;
-    letter-spacing: 2px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #a8c0ff;
+  text-shadow: 0 0 10px rgba(100, 140, 255, 0.5);
+  margin-bottom: 10px;
+  letter-spacing: 1px;
 }
 
+/* HEALTH BAR */
 .health-container {
-    position: relative;
-    width: 220px;
-    height: 35px;
-    background: rgba(0,0,0,0.8);
-    border: 3px solid #333;
-    border-radius: 20px;
-    box-shadow: 
-        inset 0 0 15px rgba(0,0,0,0.7),
-        0 0 20px rgba(255,255,255,0.1);
-    overflow: hidden;
+  position: relative;
+  width: 200px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid #333844;
+  border-radius: 12px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.health-container.player-health-container {
+  border-color: #385588;
+}
+
+.health-container.enemy-health-container {
+  border-color: #883333;
 }
 
 .health-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #00ff88, #44ffaa);
-    box-shadow: 
-        0 0 20px #00ff88,
-        inset 0 0 15px rgba(0,255,136,0.6);
-    border-radius: 17px;
-    transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    position: relative;
-    overflow: hidden;
+  height: 100%;
+  background: linear-gradient(90deg, #55aa55, #77dd77);
+  box-shadow: 0 0 12px rgba(88, 220, 88, 0.6);
+  border-radius: 10px;
+  transition: width 0.4s cubic-bezier(0.3, 0.4, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.health-container.player-health-container .health-fill {
+  background: linear-gradient(90deg, #5588ff, #77aaff);
+  box-shadow: 0 0 12px rgba(88, 140, 255, 0.6);
+}
+
+.health-container.enemy-health-container .health-fill {
+  background: linear-gradient(90deg, #cc4444, #ff6666);
+  box-shadow: 0 0 12px rgba(220, 80, 80, 0.6);
 }
 
 .health-fill::before {
-    content: '';
-    position: absolute;
-    top: 0; left: -100%;
-    width: 100%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-    animation: healthShine 3s infinite;
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: healthShine 3s infinite;
 }
 
 @keyframes healthShine {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .health-numbers {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 14px;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 0 0 8px #000;
-    z-index: 2;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 6px #000;
+  z-index: 2;
 }
 
+/* COMBO */
 .combo-display {
-    font-size: 28px;
-    font-weight: bold;
-    background: linear-gradient(45deg, #ffff00, #ffaa00);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    text-shadow: 
-        0 0 15px #ffff00,
-        0 0 30px #ff8800;
-    min-width: 180px;
-    text-align: center;
-    animation: comboPulse 0.5s ease-in-out;
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffffbb;
+  text-shadow: 0 0 12px rgba(255, 220, 100, 0.6);
+  min-width: 140px;
+  text-align: center;
+  animation: comboPulse 0.5s ease-in-out;
 }
 
 @keyframes comboPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
-.hidden { display: none !important; }
-
+/* GAME OVER */
 #gameOver {
-    box-shadow: 0 0 100px #ff4444;
+  box-shadow: 0 0 60px rgba(220, 60, 60, 0.8);
 }
 
 #gameOver .neon-title {
-    color: #ff4444 !important;
-    text-shadow: 0 0 30px #ff4444;
+  color: #ff4444;
+  text-shadow: 0 0 30px rgba(220, 60, 60, 0.8);
 }
-/* ADD TO YOUR style.css */
-.health-container {
-    position
