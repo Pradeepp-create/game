@@ -228,31 +228,34 @@ function playerAttack(type) {
 
 function enemyAI() {
     if (eStun > 0 || eHitstun > 0) return;
-    
-    const dist = Math.hypot(px - ex, py - ey);
-    const decision = Math.random();
-    
-    // Chase
-    if (dist > 120) {
-        evx += (px > ex ? 0.15 : -0.15);
-    } 
-    // Block when close and player attacking
-    else if (dist < 80 && (keys['f'] || keys['g'] || keys['q'])) {
-        if (eCooldowns.block === 0) {
-            eBlock = 45;
-            eCooldowns.block = 30;
-            spawnBlockSpark(ex, ey - 30);
-        }
+
+    const dist = Math.abs(px - ex);
+
+    // FACE PLAYER
+    if (px > ex) evx += 0.2;
+    else evx -= 0.2;
+
+    // KEEP DISTANCE SOMETIMES
+    if (dist < 70) {
+        evx += (px > ex ? -0.3 : 0.3);
     }
-    // Attack patterns
-    else if (dist < 90 && eCooldowns.punch === 0 && decision < 0.4) {
+
+    // BLOCK SMARTLY
+    if (dist < 90 && Math.random() < 0.4 && eCooldowns.block === 0) {
+        eBlock = 40;
+        eCooldowns.block = 40;
+        return;
+    }
+
+    // ATTACK BASED ON DISTANCE
+    if (dist < 80 && eCooldowns.punch === 0) {
         enemyAttack('punch');
     }
-    else if (dist < 110 && eCooldowns.kick === 0 && decision < 0.3) {
+    else if (dist < 100 && eCooldowns.kick === 0) {
         enemyAttack('kick');
     }
-    else if (dist < 100 && eStamina > 30 && eCooldowns.special === 0 && decision < 0.1) {
-        enemyAttack('special');
+    else if (dist < 110 && eStamina > 40 && eCooldowns.special === 0) {
+        if (Math.random() < 0.3) enemyAttack('special');
     }
 }
 
@@ -360,9 +363,9 @@ function update() {
     // Game logic
     updateMovement();
     if (pHitstun === 0 && pStun === 0) {
-        if (keys['f']) playerAttack('punch');
-        if (keys['g']) playerAttack('kick');
-        if (keys['q'] && pStamina >= 30) playerAttack('special');
+        if (keys['f'] && pCooldowns.punch === 0) playerAttack('punch');
+        if (keys['g'] && pCooldowns.kick === 0) playerAttack('kick');
+        if (keys['q'] && pCooldowns.special === 0) playerAttack('special');
     }
     
     enemyAI();
@@ -537,5 +540,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('startBtn').addEventListener('click', startFight);
     document.getElementById('restartBtn').addEventListener('click', restartFight);
     setupMobileControls();
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+        document.getElementById('mobileControls').classList.remove('hidden');
+    }
     gameLoop();
 });
