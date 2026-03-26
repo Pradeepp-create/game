@@ -51,32 +51,59 @@ function enemyAI() {
     }
 }
 
-// UPDATE
 function update() {
     if (!gameOn) return;
 
-    // MOVEMENT
-    if (keys['a']) pvx -= 0.5;
-    if (keys['d']) pvx += 0.5;
+    // MOVEMENT INPUT (ARROW KEYS)
+    let move = 0;
 
+    if (keys['arrowleft']) move = -1;
+    if (keys['arrowright']) move = 1;
+
+    pvx += move * 0.6;
+
+    // JUMP (only if on ground)
+    if (keys['arrowup'] && py >= 360) {
+        pvy = 14;
+    }
+
+    // DASH
     if (keys['shift'] && dashCD <= 0) {
-        pvx = px < ex ? 6 : -6;
+        pvx = (move !== 0 ? move * 6 : (px < ex ? 6 : -6));
         dashCD = 40;
     }
 
+    // ATTACK
     if (keys['f']) attack();
 
+    // APPLY PHYSICS
     pvx *= 0.85;
+    pvy -= 0.6; // gravity
+
+    // LIMIT SPEED (fix flying bug)
     pvx = Math.max(-6, Math.min(6, pvx));
+    pvy = Math.max(-15, Math.min(15, pvy));
 
     px += pvx;
+    py -= pvy;
 
+    // GROUND COLLISION
+    if (py >= 360) {
+        py = 360;
+        pvy = 0;
+    }
+
+    // SCREEN LIMIT
+    px = Math.max(20, Math.min(980, px));
+
+    // ENEMY
     evx *= 0.85;
     ex += evx;
+    ex = Math.max(20, Math.min(980, ex));
 
     enemyAI();
 
-    // COMBO RESET
+    // COMBO
     comboTimer--;
     if (comboTimer <= 0) combo = 0;
 
@@ -87,24 +114,23 @@ function update() {
     document.getElementById('pHealth').style.width = (pHealth/200)*100 + '%';
     document.getElementById('eHealth').style.width = (eHealth/200)*100 + '%';
 
-    document.getElementById('pHPText').innerText = pHealth;
-    document.getElementById('eHPText').innerText = eHealth;
+    document.getElementById('pHPText').innerText = Math.max(0, pHealth);
+    document.getElementById('eHPText').innerText = Math.max(0, eHealth);
 
-    document.getElementById('comboText').innerText = combo ? "COMBO x"+combo : "FIGHT!";
+    document.getElementById('comboText').innerText = combo ? "COMBO x" + combo : "FIGHT!";
     document.getElementById('timer').innerText = Math.floor(timer);
 
     // COOLDOWNS
-    pCD--;
-    eCD--;
-    dashCD--;
+    pCD = Math.max(0, pCD - 1);
+    eCD = Math.max(0, eCD - 1);
+    dashCD = Math.max(0, dashCD - 1);
 
-    // END
+    // GAME OVER
     if (pHealth <= 0 || eHealth <= 0 || timer <= 0) {
         gameOn = false;
         alert(pHealth > eHealth ? "YOU WIN" : "YOU LOSE");
     }
 }
-
 // RENDER
 function render() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
