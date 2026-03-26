@@ -1,36 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>FIGHT NIGHT PRO MAX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fight Night Pro</title>
+
 <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<div id="startScreen">
-    <h1>FIGHT NIGHT PRO</h1>
-    <button id="startBtn">START</button>
-</div>
+<div id="container">
 
-<canvas id="canvas" width="1000" height="500"></canvas>
+    <!-- START SCREEN -->
+    <div id="startScreen">
+        <h1 class="title">FIGHT NIGHT PRO</h1>
+        <p class="subtitle">Balanced Combat • Smart AI • Skill Based</p>
 
-<div id="hud">
-    <div class="bar">
-        <div id="pHealth"></div>
-        <span id="pHPText">200</span>
+        <div class="controls-box">
+            ⬅️ ➡️ Move<br>
+            ⬆️ Jump<br>
+            SHIFT Dash<br>
+            F Attack
+        </div>
+
+        <button id="startBtn">START FIGHT</button>
     </div>
 
-    <div id="comboText">FIGHT!</div>
+    <!-- CANVAS -->
+    <canvas id="canvas" width="1000" height="500"></canvas>
 
-    <div class="bar">
-        <div id="eHealth"></div>
-        <span id="eHPText">200</span>
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+
+        <!-- PLAYER -->
+        <div class="hud-side left">
+            <div class="name">PLAYER</div>
+
+            <div class="health-bar">
+                <div id="pHealth" class="health-fill"></div>
+                <span id="pHPText" class="hp-text">200</span>
+            </div>
+        </div>
+
+        <!-- CENTER INFO -->
+        <div class="hud-center">
+            <div id="timer">60</div>
+            <div id="comboText">FIGHT!</div>
+        </div>
+
+        <!-- ENEMY -->
+        <div class="hud-side right">
+            <div class="name">ENEMY</div>
+
+            <div class="health-bar enemy">
+                <div id="eHealth" class="health-fill"></div>
+                <span id="eHPText" class="hp-text">200</span>
+            </div>
+        </div>
+
     </div>
+
+    <!-- GAME OVER -->
+    <div id="gameOver" class="hidden">
+        <h1 id="result">YOU WIN</h1>
+        <button id="restartBtn">REPLAY</button>
+    </div>
+
 </div>
 
-<div id="timer">99</div>
+<!-- MOBILE CONTROLS -->
+<div id="mobileControls" class="hidden">
+
+    <div class="stick-area" id="stickArea"></div>
+
+    <div class="action-buttons">
+        <button id="btnJump">JUMP</button>
+        <button id="btnPunch">ATTACK</button>
+    </div>
+
+</div>
 
 <script src="script.js"></script>
+
 </body>
 </html>
