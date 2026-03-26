@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fight Night Pro</title>
-
 <link rel="stylesheet" href="style.css">
 </head>
 
@@ -15,7 +14,7 @@
     <!-- START SCREEN -->
     <div id="startScreen">
         <h1 class="title">FIGHT NIGHT PRO</h1>
-        <p class="subtitle">Balanced Combat • Smart AI • Skill Based</p>
+        <p class="subtitle">Street Combat • Smooth Animations • Smart AI</p>
 
         <div class="controls-box">
             ⬅️ ➡️ Move<br>
@@ -33,29 +32,24 @@
     <!-- HUD -->
     <div id="hud" class="hidden">
 
-        <!-- PLAYER -->
-        <div class="hud-side left">
+        <div class="hud-side">
             <div class="name">PLAYER</div>
-
             <div class="health-bar">
-                <div id="pHealth" class="health-fill"></div>
-                <span id="pHPText" class="hp-text">200</span>
+                <div id="pHealth" class="health-fill player"></div>
+                <span id="pHPText">200</span>
             </div>
         </div>
 
-        <!-- CENTER INFO -->
         <div class="hud-center">
             <div id="timer">60</div>
             <div id="comboText">FIGHT!</div>
         </div>
 
-        <!-- ENEMY -->
         <div class="hud-side right">
             <div class="name">ENEMY</div>
-
-            <div class="health-bar enemy">
-                <div id="eHealth" class="health-fill"></div>
-                <span id="eHPText" class="hp-text">200</span>
+            <div class="health-bar">
+                <div id="eHealth" class="health-fill enemy"></div>
+                <span id="eHPText">200</span>
             </div>
         </div>
 
@@ -63,20 +57,8 @@
 
     <!-- GAME OVER -->
     <div id="gameOver" class="hidden">
-        <h1 id="result">YOU WIN</h1>
+        <h1 id="result"></h1>
         <button id="restartBtn">REPLAY</button>
-    </div>
-
-</div>
-
-<!-- MOBILE CONTROLS -->
-<div id="mobileControls" class="hidden">
-
-    <div class="stick-area" id="stickArea"></div>
-
-    <div class="action-buttons">
-        <button id="btnJump">JUMP</button>
-        <button id="btnPunch">ATTACK</button>
     </div>
 
 </div>
