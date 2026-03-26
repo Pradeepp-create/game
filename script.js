@@ -1,4 +1,4 @@
-console.log('⚖️ PERFECT 50/50 BALANCE v4.1 — FULL GAME');
+console.log('⚖️ PERFECT 50/50 BALANCE v4.1 — FULL FIGHTING GAME');
 
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -6,89 +6,82 @@ const ctx = canvas.getContext('2d');
 // GAME STATE
 let gameOn = false;
 
-// Positions
-let px = 80, py = 360;
-let ex = 820, ey = 360;
+// Positions & Velocities
+let px = 100, py = 360, pvx = 0, pvy = 0;
+let ex = 800, ey = 360, evx = 0, evy = 0;
 
-// HP (still 200 base)
-let pHealth = 200;
-let eHealth = 200;
+// Combat Stats
+let pHealth = 200, eHealth = 200;
+let pStamina = 100, eStamina = 100;
+let combo = 0, comboTimer = 0;
+let timerSeconds = 99;
+let shakeAmount = 0;
 
-// Combo logic
-let combo = 0;
-let comboTimer = 0;
-
-// ROUND TIMER
-let timerSeconds = 60;
-
-// Screen shake
-let shake = 0;
-
-// Jump
-let pJump = 0;
-let eJump = 0;
-
-// Cooldowns
-let pCooldown = 0;
-let eCooldown = 0;
-
-// Stun
-let pStun = 0;
-let eStun = 0;
+// Status Effects
+let pStun = 0, eStun = 0;
+let pBlock = 0, eBlock = 0;
+let pHitstun = 0, eHitstun = 0;
+let pCooldowns = { punch: 0, kick: 0, special: 0, block: 0 };
+let eCooldowns = { punch: 0, kick: 0, special: 0, block: 0 };
 
 // Animations
-let pAnim = 0, eAnim = 0;
-
-// Enemy AI
-let aiState = 'chase';
+let pAnimFrame = 0, eAnimFrame = 0;
+let pFacingRight = false, eFacingRight = true;
 
 // Visual FX
 let particles = [];
 let damagePopups = [];
+let screenShakeFrames = 0;
 
-// Input
+// Inputs
 const keys = {};
-let stickX = 0;
+let stickX = 0, stickY = 0;
 
-// Audio
+// CONSTANTS
+const GROUND_Y = 360;
+const MAX_SPEED = 5;
+const JUMP_POWER = 14;
+const FRICTION = 0.85;
+const GRAVITY = 0.6;
+
+// AUDIO
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function playSound(freq, duration, volume = 0.25) {
+function playSound(freq, duration, type = 'square', vol = 0.2) {
     try {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
+        osc.type = type;
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.frequency.value = freq;
-        gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
-    } catch (e) {}
+    } catch(e) {}
 }
 
-// PARTICLES
-function spawnParticles(x, y, count, color) {
+// EFFECTS SYSTEM
+function spawnParticles(x, y, count, color, velX = 0, velY = 0) {
     for (let i = 0; i < count; i++) {
         particles.push({
             x, y,
-            vx: (Math.random() - 0.5) * 10,
-            vy: Math.random() * -8,
-            life: 25,
-            color,
+            vx: velX + (Math.random() - 0.5) * 8,
+            vy: velY + Math.random() * -6,
+            life: 30 + Math.random() * 20,
+            maxLife: 30 + Math.random() * 20,
+            color: color || '#ffff88',
+            size: Math.random() * 4 + 2
         });
     }
 }
 
-function spawnHitSpark(x, y, color, life = 30) {
-    particles.push({
-        x, y,
-        vx: (Math.random() - 0.5) * 4,
-        vy: (Math.random() - 0.5) * 4,
-        life,
-        color,
-        spark: true,
-    });
+function spawnHitSpark(x, y, color = '#ffff00') {
+    spawnParticles(x, y, 8, color, (Math.random() - 0.5) * 4, -2);
+}
+
+function spawnBlockSpark(x, y) {
+    spawnParticles(x, y, 6, '#88aaff', 0, -3);
 }
 
 function updateParticles() {
@@ -96,112 +89,423 @@ function updateParticles() {
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        if (!p.spark) p.vy += 0.3;
+        p.vy += 0.2;
+        p.vx *= 0.96;
         p.life--;
-        p.vx *= 0.97;
         if (p.life <= 0) particles.splice(i, 1);
     }
 }
 
-// DAMAGE POPUPS
-function spawnDamagePopup(x, y, damage, isPlayer) {
+function spawnDamagePopup(x, y, dmg, isCrit = false) {
     damagePopups.push({
         x, y,
-        damage: '-' + damage,
-        vy: -3,
-        life: 60,
-        color: isPlayer ? '#ff4444' : '#44aaff',
+        text: isCrit ? 'CRIT ' + dmg : dmg.toString(),
+        vy: -4,
+        life: 90,
+        color: isCrit ? '#ffaa00' : '#ff6666',
         scale: 1,
+        isCrit
     });
 }
 
 function updateDamagePopups() {
     for (let i = damagePopups.length - 1; i >= 0; i--) {
         const popup = damagePopups[i];
-        popup.y += popup.vy;
-        popup.vy += 0.1;
+        popup.y += popup.vy * 0.6;
+        popup.vy *= 0.96;
         popup.life--;
-        popup.scale += 0.02;
+        popup.scale = 1 + (popup.life / 90) * 0.3;
         if (popup.life <= 0) damagePopups.splice(i, 1);
     }
 }
 
-// UI HELPERS
-function setLowHpClass(el, health) {
-    const container = el.parentNode;
-    if (health <= 40) {
-        container.classList.add('low-hp');
-    } else {
-        container.classList.remove('low-hp');
-    }
-}
-
+// UI UPDATE
 function updateHealthUI() {
     const pFill = document.getElementById('pHealth');
     const eFill = document.getElementById('eHealth');
     const pNum = document.querySelector('.player-hp');
     const eNum = document.querySelector('.enemy-hp');
     
-    pFill.style.width = (pHealth / 2) + '%';
-    eFill.style.width = (eHealth / 2) + '%';
-    pNum.textContent = pHealth;
-    eNum.textContent = eHealth;
-    
-    setLowHpClass(pFill, pHealth);
-    setLowHpClass(eFill, eHealth);
+    pFill.style.width = Math.max(0, (pHealth / 200) * 100) + '%';
+    eFill.style.width = Math.max(0, (eHealth / 200) * 100) + '%';
+    pNum.textContent = Math.max(0, pHealth).toFixed(0);
+    eNum.textContent = Math.max(0, eHealth).toFixed(0);
 }
 
-// INPUT
-document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
-document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+// INPUT HANDLING
+document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-window.getStickX = () => stickX;
-
-// MOBILE SETUP
+// MOBILE CONTROLS
 function setupMobileControls() {
-    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    if (isMobile) document.getElementById('mobileControls').classList.remove('hidden');
-
     const stickArea = document.getElementById('stickArea');
     let stickTouchId = null;
 
-    stickArea.addEventListener('touchstart', (e) => {
+    stickArea.addEventListener('touchstart', e => {
         e.preventDefault();
-        if (stickTouchId === null) stickTouchId = e.touches[0].identifier;
-    }, { passive: false });
+        stickTouchId = e.changedTouches[0].identifier;
+    }, {passive: false});
 
-    stickArea.addEventListener('touchmove', (e) => {
+    stickArea.addEventListener('touchmove', e => {
         e.preventDefault();
         for (let touch of e.touches) {
             if (touch.identifier === stickTouchId) {
                 const rect = stickArea.getBoundingClientRect();
-                const x = touch.clientX - (rect.left + rect.width / 2);
-                stickX = Math.max(-1, Math.min(1, x / (rect.width / 2)));
+                stickX = Math.max(-1, Math.min(1, (touch.clientX - rect.left - rect.width/2) / (rect.width/2)));
+                stickY = Math.max(-1, Math.min(1, (touch.clientY - rect.top - rect.height/2) / (rect.height/2)));
                 break;
             }
         }
-    }, { passive: false });
+    }, {passive: false});
 
-    stickArea.addEventListener('touchend', (e) => {
+    stickArea.addEventListener('touchend', e => {
         e.preventDefault();
         stickTouchId = null;
-        stickX = 0;
-    }, { passive: false });
+        stickX = stickY = 0;
+    }, {passive: false});
 
-    // Touch buttons
-    ['btnJump', 'btnPunch', 'btnKick', 'btnUltra'].forEach((id, i) => {
+    // Action buttons
+    const btnMap = {btnJump: 'w', btnPunch: 'f', btnKick: 'g', btnUltra: 'q'};
+    Object.entries(btnMap).forEach(([id, key]) => {
         const btn = document.getElementById(id);
         if (btn) {
-            const keyMap = ['w', 'f', 'g', 'q'][i];
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyMap] = true; });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyMap] = false; });
-            btn.addEventListener('mousedown', () => keys[keyMap] = true);
-            btn.addEventListener('mouseup', () => keys[keyMap] = false);
+            ['touchstart', 'mousedown'].forEach(ev => 
+                btn.addEventListener(ev, e => {e.preventDefault(); keys[key] = true;})
+            );
+            ['touchend', 'mouseup'].forEach(ev => 
+                btn.addEventListener(ev, e => {e.preventDefault(); keys[key] = false;})
+            );
         }
     });
 }
 
-// GAME LOGIC
+// ATTACK FUNCTIONS
+function playerAttack(type) {
+    if (pCooldowns[type] > 0 || pStun > 0 || pHitstun > 0) return;
+    
+    const attackData = {
+        punch: { dmg: 12, range: 65, stun: 25, cost: 8, anim: 8, sound: 220 },
+        kick: { dmg: 18, range: 85, stun: 35, cost: 12, anim: 12, sound: 180 },
+        special: { dmg: 35, range: 95, stun: 60, cost: 30, anim: 20, sound: 150 }
+    };
+    
+    const data = attackData[type];
+    if (pStamina < data.cost) return;
+    
+    pStamina -= data.cost;
+    pCooldowns[type] = data.anim * 2;
+    pAnimFrame = data.anim;
+    
+    // Check hit
+    const dist = Math.hypot(px - ex, py - ey);
+    if (dist < data.range) {
+        let finalDmg = data.dmg;
+        let blockReduce = eBlock > 0 ? 0.6 : 1;
+        
+        if (eBlock > 0) {
+            spawnBlockSpark(ex + (px > ex ? -20 : 20), ey - 30);
+            playSound(300, 0.08, 'sine', 0.15);
+            eBlock = Math.max(0, eBlock - 10);
+        } else {
+            finalDmg *= blockReduce;
+            eHealth -= finalDmg;
+            eHitstun = data.stun;
+            spawnHitSpark(ex, ey - 40, '#ffaa00');
+            spawnDamagePopup(ex, ey - 50, finalDmg, finalDmg > 20);
+            playSound(data.sound, 0.12, 'sawtooth', 0.3);
+            screenShakeFrames = 8;
+            
+            combo++;
+            comboTimer = 180;
+        }
+        
+        // Combo scaling
+        if (combo > 3) finalDmg *= 1.2;
+    }
+    
+    playSound(400, 0.08);
+}
+
+function enemyAI() {
+    if (eStun > 0 || eHitstun > 0) return;
+    
+    const dist = Math.hypot(px - ex, py - ey);
+    const decision = Math.random();
+    
+    // Chase
+    if (dist > 120) {
+        evx += (px > ex ? 0.15 : -0.15);
+    } 
+    // Block when close and player attacking
+    else if (dist < 80 && (keys['f'] || keys['g'] || keys['q'])) {
+        if (eCooldowns.block === 0) {
+            eBlock = 45;
+            eCooldowns.block = 30;
+            spawnBlockSpark(ex, ey - 30);
+        }
+    }
+    // Attack patterns
+    else if (dist < 90 && eCooldowns.punch === 0 && decision < 0.4) {
+        enemyAttack('punch');
+    }
+    else if (dist < 110 && eCooldowns.kick === 0 && decision < 0.3) {
+        enemyAttack('kick');
+    }
+    else if (dist < 100 && eStamina > 30 && eCooldowns.special === 0 && decision < 0.1) {
+        enemyAttack('special');
+    }
+}
+
+function enemyAttack(type) {
+    const data = {
+        punch: { dmg: 14, range: 70, stun: 28, cost: 10 },
+        kick: { dmg: 20, range: 90, stun: 38, cost: 14 },
+        special: { dmg: 40, range: 100, stun: 65, cost: 35 }
+    };
+    
+    const d = data[type];
+    if (eStamina < d.cost || eCooldowns[type] > 0) return;
+    
+    eStamina -= d.cost;
+    eCooldowns[type] = d.stun * 1.5;
+    eAnimFrame = d.stun / 2;
+    
+    const dist = Math.hypot(px - ex, py - ey);
+    if (dist < d.range) {
+        let finalDmg = d.dmg * (pBlock > 0 ? 0.5 : 1);
+        if (pBlock > 0) {
+            pBlock = Math.max(0, pBlock - 15);
+            spawnBlockSpark(px + (ex > px ? -20 : 20), py - 30);
+        } else {
+            pHealth -= finalDmg;
+            pHitstun = d.stun;
+            spawnHitSpark(px, py - 40, '#ff4444');
+            spawnDamagePopup(px, py - 50, finalDmg);
+            screenShakeFrames = 10;
+            playSound(160, 0.15, 'sawtooth', 0.35);
+        }
+    }
+}
+
+// MOVEMENT
+function updateMovement() {
+    // Player input
+    let moveInput = stickX || (keys['d'] ? 1 : keys['a'] ? -1 : 0);
+    pvx += moveInput * 0.5;
+    
+    if (keys['w'] || stickY < -0.5) {
+        if (Math.abs(pvy) < 1) pvy = JUMP_POWER;
+    }
+    
+    // Block input
+    if (keys['s'] && pStamina > 5) {
+        if (pCooldowns.block === 0) {
+            pBlock = 40;
+            pCooldowns.block = 25;
+            pStamina -= 3;
+        }
+    }
+    
+    // Physics
+    pvx *= FRICTION;
+    pvy -= GRAVITY;
+    px += pvx;
+    py += pvy;
+    
+    // Ground collision
+    if (py >= GROUND_Y) {
+        py = GROUND_Y;
+        pvy = 0;
+    }
+    
+    px = Math.max(20, Math.min(950, px));
+    
+    // Face direction
+    pFacingRight = pvx > 0;
+    
+    // Enemy physics (from AI)
+    evx *= FRICTION;
+    evy -= GRAVITY;
+    ex += evx;
+    ey += evy;
+    if (ey >= GROUND_Y) {
+        ey = GROUND_Y;
+        evy = 0;
+    }
+    ex = Math.max(50, Math.min(920, ex));
+    eFacingRight = evx > 0;
+    
+    // Regen stamina
+    pStamina = Math.min(100, pStamina + 0.2);
+    eStamina = Math.min(100, eStamina + 0.15);
+}
+
+// CORE UPDATE
+function update() {
+    if (!gameOn) return;
+    
+    // Decrement timers
+    Object.keys(pCooldowns).forEach(k => pCooldowns[k] = Math.max(0, pCooldowns[k] - 1));
+    Object.keys(eCooldowns).forEach(k => eCooldowns[k] = Math.max(0, eCooldowns[k] - 1));
+    [pStun, eStun, pHitstun, eHitstun, pBlock, eBlock] = 
+        [pStun, eStun, pHitstun, eHitstun, pBlock, eBlock].map(t => Math.max(0, t - 1));
+    timerSeconds = Math.max(0, timerSeconds - 1/60);
+    screenShakeFrames = Math.max(0, screenShakeFrames - 1);
+    
+    // Update UI
+    document.getElementById('timer').textContent = `TIME: ${Math.floor(timerSeconds)}`;
+    document.getElementById('combo').textContent = combo > 0 ? `COMBO x${combo}` : 'FIGHT!';
+    updateHealthUI();
+    
+    // Game logic
+    updateMovement();
+    if (pHitstun === 0 && pStun === 0) {
+        if (keys['f']) playerAttack('punch');
+        if (keys['g']) playerAttack('kick');
+        if (keys['q'] && pStamina >= 30) playerAttack('special');
+    }
+    
+    enemyAI();
+    
+    // Update effects
+    updateParticles();
+    updateDamagePopups();
+    
+    pAnimFrame = Math.max(0, pAnimFrame - 1);
+    eAnimFrame = Math.max(0, eAnimFrame - 1);
+    
+    // Game Over
+    if (timerSeconds <= 0 || pHealth <= 0 || eHealth <= 0) {
+        gameOn = false;
+        document.getElementById('gameOver').classList.remove('hidden');
+        document.getElementById('hud').classList.add('hidden');
+        const result = pHealth <= 0 ? 'DEFEAT!' : 
+                      eHealth <= 0 ? 'PERFECT VICTORY!' : 
+                      pHealth > eHealth ? 'TIME WIN!' : 'DRAW!';
+        document.getElementById('result').textContent = result;
+    }
+}
+
+// RENDERING
+function renderFighter(x, y, healthPct, isPlayer, animFrame, facingRight, stunned, blocking) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (!facingRight) {
+        ctx.scale(-1, 1);
+        ctx.translate(40, 0);
+    }
+    
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(-20, 65, 40, 10);
+    
+    // Body
+    const bodyColor = stunned ? '#666' : blocking ? '#88aaff' : 
+                     healthPct < 0.3 ? '#ff6666' : isPlayer ? '#4488ff' : '#cc4444';
+    ctx.fillStyle = bodyColor;
+    ctx.fillRect(-20, -55, 40, 70);
+    
+    // Head
+    ctx.fillStyle = healthPct < 0.3 ? '#ffaaaa' : isPlayer ? '#77aaff' : '#ff6666';
+    ctx.fillRect(-12, -75, 24, 22);
+    ctx.fillStyle = stunned ? '#999' : '#ffffff';
+    ctx.fillRect(facingRight ? -6 : -18, -68, 5, 6);
+    ctx.fillRect(facingRight ? 1 : -13, -68, 5, 6);
+    
+    // Arms
+    ctx.fillStyle = bodyColor;
+    if (animFrame > 5) {
+        ctx.fillRect(-35, -35, 28, 12); // Punch/Kick arm forward
+    } else {
+        ctx.fillRect(-25, -35, 18, 20);
+        ctx.fillRect(7, -35, 18, 20);
+    }
+    
+    // Legs
+    ctx.fillStyle = bodyColor;
+    if (animFrame > 8) {
+        ctx.fillRect(-15, 15, 12, 40); // Kick leg
+        ctx.fillRect(3, 15, 12, 30);
+    } else {
+        ctx.fillRect(-12, 15, 10, 35);
+        ctx.fillRect(2, 15, 10, 35);
+    }
+    
+    // Stun stars
+    if (stunned > 0) {
+        ctx.fillStyle = '#ffff00';
+        ctx.fillRect(-25, -90, 6, 6);
+        ctx.fillRect(19, -85, 6, 6);
+        ctx.fillRect(-10, -95, 6, 6);
+    }
+    
+    ctx.restore();
+}
+
+function render() {
+    // Background + shake
+    ctx.save();
+    if (screenShakeFrames > 0) {
+        ctx.translate(
+            (Math.random() - 0.5) * 10,
+            (Math.random() - 0.5) * 10
+        );
+    }
+    
+    // Arena
+    const gradient = ctx.createLinearGradient(0, 0, 0, 500);
+    gradient.addColorStop(0, '#0a0a1f');
+    gradient.addColorStop(1, '#1a1a2f');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1000, 500);
+    
+    // Ground
+    ctx.fillStyle = '#2a2a4a';
+    ctx.fillRect(0, 380, 1000, 140);
+    ctx.fillStyle = '#3a3a6a';
+    ctx.fillRect(0, 385, 1000, 10);
+    
+    // Fighters
+    renderFighter(px, py, pHealth/200, true, pAnimFrame, pFacingRight, pStun, pBlock);
+    renderFighter(ex, ey, eHealth/200, false, eAnimFrame, eFacingRight, eStun, eBlock);
+    
+    // Particles
+    particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+        ctx.restore();
+    });
+    
+    // Damage popups
+    damagePopups.forEach(popup => {
+        ctx.save();
+        ctx.globalAlpha = popup.life / 90;
+        ctx.translate(popup.x, popup.y);
+        ctx.scale(popup.scale, popup.scale);
+        ctx.fillStyle = popup.color;
+        ctx.font = `bold ${popup.isCrit ? 24 : 20}px Courier New`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(popup.text, 0, 0);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.strokeText(popup.text, 0, 0);
+        ctx.restore();
+    });
+    
+    ctx.restore();
+}
+
+// MAIN LOOP
+function gameLoop() {
+    update();
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+// GAME FUNCTIONS
 function startFight() {
     gameOn = true;
     document.getElementById('startScreen').classList.add('hidden');
@@ -216,187 +520,16 @@ function restartFight() {
 
 function resetGame() {
     pHealth = eHealth = 200;
-    px = 80; ex = 820; py = ey = 360;
-    combo = comboTimer = 0;
-    timerSeconds = 60;
-    pStun = eStun = pCooldown = eCooldown = 0;
-    aiState = 'chase';
+    pStamina = eStamina = 100;
+    px = 100; ex = 800;
+    py = ey = GROUND_Y;
+    combo = 0;
+    timerSeconds = 99;
     particles = []; damagePopups = [];
+    pStun = eStun = pHitstun = eHitstun = 0;
+    Object.assign(pCooldowns, {punch:0, kick:0, special:0, block:0});
+    Object.assign(eCooldowns, {punch:0, kick:0, special:0, block:0});
     updateHealthUI();
-    document.getElementById('timer').textContent = 'TIME: 60';
-}
-
-function update() {
-    if (!gameOn) return;
-
-    // Timers
-    comboTimer = Math.max(0, comboTimer - 1);
-    pCooldown = Math.max(0, pCooldown - 1);
-    eCooldown = Math.max(0, eCooldown - 1);
-    pStun = Math.max(0, pStun - 1);
-    eStun = Math.max(0, eStun - 1);
-    timerSeconds = Math.max(0, timerSeconds - 1/60);
-
-    // Update timer display
-    document.getElementById('timer').textContent = `TIME: ${Math.floor(timerSeconds)}`;
-
-    // PLAYER MOVEMENT
-    if (!pStun && keys['a']) px = Math.max(0, px - 3);
-    if (!pStun && keys['d']) px = Math.min(900, px + 3);
-    if (!pStun && keys['w'] && pJump === 0) { pJump = 14; playSound(400, 0.1); }
-
-    // JUMP
-    pJump = Math.max(0, pJump - 0.8);
-    py = 360 - pJump * 8;
-
-    // ENEMY AI (simple chase)
-    if (!eStun) {
-        if (ex > px + 60) ex -= 1.5;
-        if (ex < px + 60) ex += 1;
-        if (Math.random() < 0.02) eJump = 12;
-    }
-    eJump = Math.max(0, eJump - 0.8);
-    ey = 360 - eJump * 8;
-
-    // ATTACKS
-    if (keys['f'] && pCooldown === 0) { // Punch
-        if (Math.abs(px - ex) < 80) {
-            eHealth -= 10;
-            spawnHitSpark(ex, ey, '#ffff00');
-            spawnDamagePopup(ex, ey - 20, 10, false);
-            playSound(200, 0.1, 0.3);
-            eStun = 30;
-            combo++;
-            comboTimer = 120;
-        }
-        pCooldown = 20;
-        pAnim = 10;
-    }
-
-    if (keys['g'] && pCooldown === 0) { // Kick
-        if (Math.abs(px - ex) < 100) {
-            eHealth -= 15;
-            spawnHitSpark(ex, ey, '#ff6600');
-            spawnDamagePopup(ex, ey - 20, 15, false);
-            playSound(180, 0.15, 0.4);
-            eStun = 45;
-            combo++;
-            comboTimer = 120;
-        }
-        pCooldown = 30;
-        pAnim = 15;
-    }
-
-    // Update health UI
-    updateHealthUI();
-
-    // Game over conditions
-    if (timerSeconds <= 0 || pHealth <= 0 || eHealth <= 0) {
-        gameOn = false;
-        document.getElementById('gameOver').classList.remove('hidden');
-        document.getElementById('hud').classList.add('hidden');
-        document.getElementById('result').textContent = 
-            pHealth <= 0 ? 'DEFEAT!' :
-            eHealth <= 0 ? 'KO VICTORY!' :
-            pHealth > eHealth ? 'TIME VICTORY!' : 'TIME DRAW!';
-    }
-
-    // Update effects
-    updateParticles();
-    updateDamagePopups();
-    pAnim = Math.max(0, pAnim - 1);
-    eAnim = Math.max(0, eAnim - 1);
-}
-
-// RENDER FIGHTERS + EFFECTS
-function render() {
-    // Clear with shake
-    ctx.save();
-    if (shake > 0) {
-        ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
-        shake--;
-    }
-    
-    ctx.fillStyle = '#0a0a15';
-    ctx.fillRect(0, 0, 1000, 500);
-
-    // GROUND
-    ctx.fillStyle = '#2a2a3a';
-    ctx.fillRect(0, 380, 1000, 120);
-
-    // PLAYER (RYU - Blue gi)
-    ctx.fillStyle = pStun ? '#666' : '#4488ff';
-    ctx.fillRect(px - 25, py - 60, 50, 80); // Body
-    ctx.fillStyle = '#77aaff';
-    ctx.fillRect(px - 15, py - 80, 30, 25); // Head
-    ctx.fillStyle = pStun ? '#999' : '#ffffff';
-    ctx.fillRect(px - 8, py - 75, 6, 8); // Eye
-    ctx.fillRect(px + 2, py - 75, 6, 8);
-
-    // Arms (punch anim)
-    if (pAnim > 5) {
-        ctx.fillStyle = '#3366cc';
-        ctx.fillRect(px - 35, py - 40, 25, 15); // Punch arm
-    } else {
-        ctx.fillStyle = '#3366cc';
-        ctx.fillRect(px - 20, py - 40, 15, 20); // Idle arm
-    }
-
-    // Legs (kick anim)
-    if (pAnim > 8) {
-        ctx.fillStyle = '#2244aa';
-        ctx.fillRect(px - 15, py + 20, 12, 35); // Kick leg
-        ctx.fillRect(px + 3, py + 20, 12, 25);  // Other leg
-    } else {
-        ctx.fillRect(px - 12, py + 20, 10, 30);
-        ctx.fillRect(px + 2, py + 20, 10, 30);
-    }
-
-    // ENEMY (AKUMA - Red gi)
-    ctx.fillStyle = eStun ? '#666' : '#cc4444';
-    ctx.fillRect(ex - 25, ey - 60, 50, 80); // Body
-    ctx.fillStyle = '#ff6666';
-    ctx.fillRect(ex - 15, ey - 80, 30, 25); // Head
-    ctx.fillStyle = eStun ? '#999' : '#ffaaaa';
-    ctx.fillRect(ex - 8, ey - 75, 6, 8); // Eye
-    ctx.fillRect(ex + 2, ey - 75, 6, 8);
-
-    // Enemy arms/legs (mirror)
-    ctx.fillStyle = '#aa3333';
-    ctx.fillRect(ex + 5, ey - 40, 15, 20);
-    ctx.fillRect(ex - 12, ey + 20, 10, 30);
-    ctx.fillRect(ex + 2, ey + 20, 10, 30);
-
-    // PARTICLES
-    particles.forEach(p => {
-        ctx.save();
-        ctx.globalAlpha = p.life / 30;
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
-        ctx.restore();
-    });
-
-    // DAMAGE POPUPS
-    damagePopups.forEach(popup => {
-        ctx.save();
-        ctx.globalAlpha = popup.life / 60;
-        ctx.translate(popup.x, popup.y);
-        ctx.scale(popup.scale, popup.scale);
-        ctx.fillStyle = popup.color;
-        ctx.font = 'bold 20px Courier New';
-        ctx.textAlign = 'center';
-        ctx.fillText(popup.damage, 0, 0);
-        ctx.restore();
-    });
-
-    ctx.restore();
-}
-
-// GAME LOOP
-function gameLoop() {
-    update();
-    render();
-    requestAnimationFrame(gameLoop);
 }
 
 // INIT
