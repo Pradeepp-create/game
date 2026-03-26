@@ -380,7 +380,7 @@ function draw() {
 
     // — PLAYER —
     ctx.shadowColor = '#44aaff';
-    ctx.shadowBlur = pStun > 0 ? 5 : 15;
+    ctx.shadowBlur = pStun > 0 ? 4 : 8;
 
     ctx.fillStyle = pStun > 0 ? '#888' : '#44aaff'; // Head
     ctx.fillRect(px + 12, py - 8, 26, 28);
@@ -394,7 +394,7 @@ function draw() {
 
     // — ENEMY —
     ctx.shadowColor = '#ff4444';
-    ctx.shadowBlur = eStun > 0 ? 5 : 15;
+    ctx.shadowBlur = eStun > 0 ? 4 : 8;
 
     ctx.fillStyle = eStun > 0 ? '#888' : '#ff4444'; // Head
     ctx.fillRect(ex + 12, ey - 8, 26, 28);
