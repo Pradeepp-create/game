@@ -239,6 +239,7 @@ function update(){
 
     if(py >= 360){ py = 360; pvy = 0; }
     px = Math.max(60, Math.min(940, px));
+    evx = Math.max(-4, Math.min(4, evx));
 
     // ENEMY
     enemyAI();
