@@ -253,55 +253,38 @@ function animate(){
 }
 
 // 🔥 AUTO-CROP DRAW (NO BOX LOOK)
-function draw(img, frame, x, y, w, h, frames){
+function draw(img, frame, x, y, scale, frames, flip=false){
     if (!img.complete) return;
 
     const fw = img.width / frames;
+    const fh = img.height;
 
-    const temp = document.createElement("canvas");
-    const tctx = temp.getContext("2d");
+    ctx.save();
 
-    temp.width = fw;
-    temp.height = img.height;
-
-    tctx.drawImage(img, fw*(frame%frames),0,fw,img.height,0,0,fw,img.height);
-
-    const data = tctx.getImageData(0,0,fw,img.height).data;
-
-    let minX=fw, maxX=0, minY=img.height, maxY=0;
-
-    for(let y1=0;y1<img.height;y1++){
-        for(let x1=0;x1<fw;x1++){
-            if(data[(y1*fw+x1)*4+3]>0){
-                if(x1<minX) minX=x1;
-                if(x1>maxX) maxX=x1;
-                if(y1<minY) minY=y1;
-                if(y1>maxY) maxY=y1;
-            }
-        }
+    if(flip){
+        ctx.translate(x, 0);
+        ctx.scale(-1, 1);
+        x = 0;
     }
-
-    const cw = maxX-minX;
-    const ch = maxY-minY;
 
     ctx.drawImage(
         img,
-        fw*(frame%frames)+minX, minY,
-        cw, ch,
-        Math.round(x-w/2),
-        Math.round(y-h+5),
-        w, h
+        fw * (frame % frames), 0,
+        fw, fh,
+        Math.round(x - (fw*scale)/2),
+        Math.round(y - fh*scale),
+        fw * scale,
+        fh * scale
     );
+
+    ctx.restore();
 }
 
 // RENDER
 function render(){
     ctx.save();
 
-    ctx.translate(
-        (Math.random()-0.5)*shake,
-        (Math.random()-0.5)*shake
-    );
+    ctx.translate((Math.random()-0.5)*shake*0.3,(Math.random()-0.5)*shake*0.3);
 
     ctx.clearRect(0,0,1000,500);
 
@@ -320,7 +303,7 @@ function render(){
     if(pState==="walk"){pi=pWalk;pf=6;}
     if(pState==="punch"){pi=pPunch;pf=4;}
 
-    draw(pi,pFrame,px,py,70,90,pf);
+    draw(pi, pFrame, px, py, 1.2, pf, false);
 
     // ENEMY
     ctx.save();
@@ -335,7 +318,10 @@ function render(){
     if(eState==="walk"){ei=eWalk;ef=6;}
     if(eState==="punch"){ei=ePunch;ef=4;}
 
-    draw(ei,eFrame,0,ey,70,90,ef);
+    draw(ei, eFrame, ex, ey, 1.2, ef, true);
+
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0,380,1000,120);
 
     ctx.restore();
 
