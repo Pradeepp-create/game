@@ -1,7 +1,8 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-let gameOn = false;
+// 🔥 FIX PIXEL LOOK
+ctx.imageSmoothingEnabled = false;
 
 // LOAD
 function load(src){
@@ -10,42 +11,45 @@ function load(src){
     return img;
 }
 
-const playerIdle = load("assets/player_idle.png");
-const playerWalk = load("assets/player_walk.png");
-const playerPunch = load("assets/player_punch.png");
+const pIdle = load("assets/player_idle.png");
+const pWalk = load("assets/player_walk.png");
+const pPunch = load("assets/player_punch.png");
 
-const enemyIdle = load("assets/enemy_idle.png");
-const enemyWalk = load("assets/enemy_walk.png");
-const enemyPunch = load("assets/enemy_punch.png");
+const eIdle = load("assets/enemy_idle.png");
+const eWalk = load("assets/enemy_walk.png");
+const ePunch = load("assets/enemy_punch.png");
 
-const bgImg = load("assets/bg.png");
+const bg = load("assets/bg.png");
 
-// GAME STATE
+// STATE
 let px, py, pvx, pvy;
 let ex, ey, evx;
 
-let pHealth, eHealth;
-let pDisplay, eDisplay;
+let pHP, eHP, pDisp, eDisp;
 
 let pState, eState;
-let pFrame, eFrame;
-let pTick, eTick;
+let pFrame, eFrame, pTick, eTick;
 
-let pCD, eCD, dashCD;
-let timer;
+let pAtk = 0, eAtk = 0;
+let pStun = 0, eStun = 0;
+
+let pBlocking = false;
+let eBlocking = false;
+
+let timer = 60;
+let gameOn = false;
 
 let particles = [];
 let shake = 0;
 let bgX = 0;
 
-// INPUT
 const keys = {};
 document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
 // START / REPLAY
-document.getElementById('startBtn').onclick = () => startGame();
-document.getElementById('restartBtn').onclick = () => startGame();
+document.getElementById('startBtn').onclick = startGame;
+document.getElementById('restartBtn').onclick = startGame;
 
 function startGame(){
     gameOn = true;
@@ -57,24 +61,25 @@ function startGame(){
     px = 150; py = 360; pvx = 0; pvy = 0;
     ex = 750; ey = 360; evx = 0;
 
-    pHealth = eHealth = 200;
-    pDisplay = eDisplay = 200;
+    pHP = eHP = 200;
+    pDisp = eDisp = 200;
 
     pState = eState = "idle";
     pFrame = eFrame = 0;
     pTick = eTick = 0;
 
-    pCD = eCD = dashCD = 0;
-    timer = 60;
+    pAtk = eAtk = 0;
+    pStun = eStun = 0;
 
+    timer = 60;
     particles = [];
     shake = 0;
     bgX = 0;
 }
 
 // PARTICLES
-function spawnParticles(x,y){
-    for(let i=0;i<6;i++){
+function spawn(x,y){
+    for(let i=0;i<5;i++){
         particles.push({
             x,y,
             vx:(Math.random()-0.5)*4,
@@ -86,54 +91,79 @@ function spawnParticles(x,y){
 
 // PLAYER ATTACK
 function playerAttack(){
-    if(pCD>0) return;
-
-    pState="punch";
-    pFrame=0;
-
-    if(Math.abs(px-ex)<85){
-        eHealth -= 10;
-        shake=6;
-        spawnParticles(ex,ey-50);
-    }
-
-    pCD=25;
+    if(pAtk>0 || pStun>0) return;
+    pAtk = 18;
+    pState = "punch";
+    pFrame = 0;
 }
 
-// 🔥 BETTER AI
-function enemyAI(){
-    const dist = Math.abs(px-ex);
+// ENEMY ATTACK
+function enemyAttack(){
+    if(eAtk>0 || eStun>0) return;
+    eAtk = 20;
+    eState = "punch";
+    eFrame = 0;
+}
 
-    // movement logic
-    if(dist > 120){
-        evx += px>ex ? 0.25 : -0.25;
-        eState="walk";
-    }
-    else if(dist > 70){
-        evx += px>ex ? 0.15 : -0.15;
-        eState="walk";
-    }
-    else{
-        evx *= 0.6;
+// HIT SYSTEM
+function hitCheck(){
+    const dist = Math.abs(px - ex);
 
-        // attack timing (human-like delay)
-        if(eCD<=0 && Math.random() < 0.04){
-            eState="punch";
-            eFrame=0;
-
-            pHealth -= 8;
-            shake=5;
-            spawnParticles(px,py-50);
-
-            eCD=50;
-        }else{
-            eState="idle";
+    if(pAtk === 10 && dist < 85){
+        if(!eBlocking){
+            eHP -= 12;
+            eStun = 12;
+            evx += px < ex ? 5 : -5;
+            spawn(ex, ey-50);
+            shake = 7;
+        } else {
+            eHP -= 3;
         }
     }
 
-    // slight retreat (feels smarter)
-    if(pState==="punch" && dist<90){
-        evx += px>ex ? -0.4 : 0.4;
+    if(eAtk === 12 && dist < 85){
+        if(!pBlocking){
+            pHP -= 10;
+            pStun = 10;
+            pvx += ex < px ? 5 : -5;
+            spawn(px, py-50);
+            shake = 6;
+        } else {
+            pHP -= 3;
+        }
+    }
+}
+
+// AI
+function enemyAI(){
+    const dist = Math.abs(px - ex);
+
+    if(eStun>0) return;
+
+    if(dist > 100){
+        evx += px > ex ? 0.3 : -0.3;
+        eState = "walk";
+    } else {
+        evx *= 0.7;
+
+        // BLOCK SOMETIMES
+        if(pAtk > 10 && Math.random() < 0.6){
+            eBlocking = true;
+        } else {
+            eBlocking = false;
+        }
+
+        // ATTACK
+        if(eAtk <= 0 && Math.random() < 0.05){
+            enemyAttack();
+        } else if(!eBlocking){
+            eState = "idle";
+        }
+    }
+
+    // RETREAT IF TOO CLOSE
+    if(dist < 60){
+        evx += px > ex ? -0.3 : 0.3;
     }
 }
 
@@ -141,24 +171,22 @@ function enemyAI(){
 function update(){
     if(!gameOn) return;
 
-    let move=0;
-    if(keys['arrowleft']) move=-1;
-    if(keys['arrowright']) move=1;
+    let move = 0;
+    if(keys['arrowleft']) move = -1;
+    if(keys['arrowright']) move = 1;
 
-    pvx += move*0.6;
+    pBlocking = keys['s'];
 
-    if(pState!=="punch"){
-        pState = move!==0 ? "walk":"idle";
+    if(pStun <= 0){
+        pvx += move * 0.6;
+
+        if(pState !== "punch"){
+            pState = move !== 0 ? "walk" : "idle";
+        }
+
+        if(keys['arrowup'] && py >= 360) pvy = 14;
+        if(keys['f']) playerAttack();
     }
-
-    if(keys['arrowup'] && py>=360) pvy=14;
-
-    if(keys['shift'] && dashCD<=0){
-        pvx = move!==0 ? move*8 : (px<ex?8:-8);
-        dashCD=40;
-    }
-
-    if(keys['f']) playerAttack();
 
     pvx *= 0.85;
     pvy -= 0.6;
@@ -166,8 +194,7 @@ function update(){
     px += pvx;
     py -= pvy;
 
-    if(py>=360){ py=360; pvy=0; }
-
+    if(py >= 360){ py = 360; pvy = 0; }
     px = Math.max(60, Math.min(940, px));
 
     // ENEMY
@@ -177,75 +204,93 @@ function update(){
     ex += evx;
     ex = Math.max(60, Math.min(940, ex));
 
-    // BG
-    bgX -= move*1.2;
+    // HIT CHECK
+    hitCheck();
+
+    // TIMERS
+    if(pAtk>0) pAtk--;
+    if(eAtk>0) eAtk--;
+
+    if(pStun>0) pStun--;
+    if(eStun>0) eStun--;
 
     // HEALTH SMOOTH
-    pDisplay += (pHealth-pDisplay)*0.1;
-    eDisplay += (eHealth-eDisplay)*0.1;
+    pDisp += (pHP - pDisp) * 0.1;
+    eDisp += (eHP - eDisp) * 0.1;
 
-    document.getElementById('pHealth').style.width = (pDisplay/200)*100+"%";
-    document.getElementById('eHealth').style.width = (eDisplay/200)*100+"%";
+    document.getElementById('pHealth').style.width = (pDisp/200)*100 + "%";
+    document.getElementById('eHealth').style.width = (eDisp/200)*100 + "%";
 
-    document.getElementById('pHPText').innerText = Math.max(0,pHealth);
-    document.getElementById('eHPText').innerText = Math.max(0,eHealth);
-
+    document.getElementById('pHPText').innerText = Math.max(0,pHP);
+    document.getElementById('eHPText').innerText = Math.max(0,eHP);
     document.getElementById('timer').innerText = Math.floor(timer);
-
-    // ANIMATION
-    animate();
 
     // PARTICLES
     particles.forEach(p=>{
-        p.x+=p.vx;
-        p.y+=p.vy;
+        p.x += p.vx;
+        p.y += p.vy;
         p.life--;
     });
     particles = particles.filter(p=>p.life>0);
 
     // END
-    if(pHealth<=0 || eHealth<=0 || timer<=0){
-        gameOn=false;
+    if(pHP<=0 || eHP<=0 || timer<=0){
+        gameOn = false;
         document.getElementById('gameOver').classList.remove('hidden');
         document.getElementById('result').innerText =
-            pHealth>eHealth ? "YOU WIN":"YOU LOSE";
+            pHP > eHP ? "YOU WIN" : "YOU LOSE";
     }
 
     timer -= 1/60;
 
-    pCD=Math.max(0,pCD-1);
-    eCD=Math.max(0,eCD-1);
-    dashCD=Math.max(0,dashCD-1);
-
-    shake *= 0.9;
+    animate();
 }
 
-// ANIMATION FIX (less wonky)
+// ANIMATION
 function animate(){
-    pTick++;
-    if(pTick>8){
-        pFrame++;
-        pTick=0;
-    }
-
-    eTick++;
-    if(eTick>10){
-        eFrame++;
-        eTick=0;
-    }
+    pTick++; if(pTick>6){pFrame++;pTick=0;}
+    eTick++; if(eTick>8){eFrame++;eTick=0;}
 }
 
-// DRAW SPRITE (FIXED ALIGNMENT)
-function drawSprite(img,frame,x,y,w,h,frames){
-    const fw = img.width/frames;
+// 🔥 AUTO-CROP DRAW (NO BOX LOOK)
+function draw(img, frame, x, y, w, h, frames){
+    if (!img.complete) return;
+
+    const fw = img.width / frames;
+
+    const temp = document.createElement("canvas");
+    const tctx = temp.getContext("2d");
+
+    temp.width = fw;
+    temp.height = img.height;
+
+    tctx.drawImage(img, fw*(frame%frames),0,fw,img.height,0,0,fw,img.height);
+
+    const data = tctx.getImageData(0,0,fw,img.height).data;
+
+    let minX=fw, maxX=0, minY=img.height, maxY=0;
+
+    for(let y1=0;y1<img.height;y1++){
+        for(let x1=0;x1<fw;x1++){
+            if(data[(y1*fw+x1)*4+3]>0){
+                if(x1<minX) minX=x1;
+                if(x1>maxX) maxX=x1;
+                if(y1<minY) minY=y1;
+                if(y1>maxY) maxY=y1;
+            }
+        }
+    }
+
+    const cw = maxX-minX;
+    const ch = maxY-minY;
 
     ctx.drawImage(
         img,
-        fw*(frame%frames),0,
-        fw,img.height,
+        fw*(frame%frames)+minX, minY,
+        cw, ch,
         Math.round(x-w/2),
-        Math.round(y-h+5), // small offset fix
-        w,h
+        Math.round(y-h+5),
+        w, h
     );
 }
 
@@ -258,32 +303,39 @@ function render(){
         (Math.random()-0.5)*shake
     );
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0,0,1000,500);
 
     // BG
-    ctx.drawImage(bgImg,bgX%1000,0,1000,500);
-    ctx.drawImage(bgImg,(bgX%1000)+1000,0,1000,500);
+    ctx.drawImage(bg,bgX%1000,0,1000,500);
+    ctx.drawImage(bg,(bgX%1000)+1000,0,1000,500);
 
+    // SHADOW PLAYER
     ctx.fillStyle="rgba(0,0,0,0.4)";
-    ctx.fillRect(0,380,1000,120);
+    ctx.beginPath();
+    ctx.ellipse(px,370,25,8,0,0,Math.PI*2);
+    ctx.fill();
 
     // PLAYER
-    let pImg=playerIdle, pFrames=4;
-    if(pState==="walk"){pImg=playerWalk;pFrames=6;}
-    if(pState==="punch"){pImg=playerPunch;pFrames=4;}
+    let pi=pIdle,pf=4;
+    if(pState==="walk"){pi=pWalk;pf=6;}
+    if(pState==="punch"){pi=pPunch;pf=4;}
 
-    drawSprite(pImg,pFrame,px,py,85,95,pFrames);
+    draw(pi,pFrame,px,py,70,90,pf);
 
     // ENEMY
     ctx.save();
     ctx.translate(ex,0);
     ctx.scale(-1,1);
 
-    let eImg=enemyIdle, eFrames=4;
-    if(eState==="walk"){eImg=enemyWalk;eFrames=6;}
-    if(eState==="punch"){eImg=enemyPunch;eFrames=4;}
+    ctx.beginPath();
+    ctx.ellipse(0,370,25,8,0,0,Math.PI*2);
+    ctx.fill();
 
-    drawSprite(eImg,eFrame,0,ey,85,95,eFrames);
+    let ei=eIdle,ef=4;
+    if(eState==="walk"){ei=eWalk;ef=6;}
+    if(eState==="punch"){ei=ePunch;ef=4;}
+
+    draw(ei,eFrame,0,ey,70,90,ef);
 
     ctx.restore();
 
