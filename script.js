@@ -134,36 +134,79 @@ function hitCheck(){
     }
 }
 
-// AI
 function enemyAI(){
     const dist = Math.abs(px - ex);
 
-    if(eStun>0) return;
+    // face direction
+    const dir = px > ex ? 1 : -1;
 
-    if(dist > 100){
-        evx += px > ex ? 0.3 : -0.3;
-        eState = "walk";
-    } else {
-        evx *= 0.7;
-
-        // BLOCK SOMETIMES
-        if(pAtk > 10 && Math.random() < 0.6){
-            eBlocking = true;
-        } else {
-            eBlocking = false;
-        }
-
-        // ATTACK
-        if(eAtk <= 0 && Math.random() < 0.05){
-            enemyAttack();
-        } else if(!eBlocking){
-            eState = "idle";
-        }
+    // if stunned → do nothing
+    if(eStun > 0){
+        eState = "idle";
+        return;
     }
 
-    // RETREAT IF TOO CLOSE
-    if(dist < 60){
-        evx += px > ex ? -0.3 : 0.3;
+    // 🔥 ALWAYS APPROACH (AFK FIX)
+    if(dist > 110){
+        evx += 0.4 * dir;
+        eState = "walk";
+        eBlocking = false;
+        return;
+    }
+
+    // 🔥 MID RANGE (thinking zone)
+    if(dist > 70 && dist <= 110){
+        evx += 0.2 * dir;
+        eState = "walk";
+
+        // sometimes dash in
+        if(Math.random() < 0.02){
+            evx += 3 * dir;
+        }
+
+        eBlocking = false;
+        return;
+    }
+
+    // 🔥 CLOSE RANGE (REAL FIGHT)
+    if(dist <= 70){
+
+        evx *= 0.6; // slow down
+
+        // 🛡 BLOCK if player attacking
+        if(pAtk > 8){
+            if(Math.random() < 0.7){
+                eBlocking = true;
+                eState = "idle";
+                return;
+            }
+        }
+
+        eBlocking = false;
+
+        // 🧠 PUNISH (counter attack)
+        if(pAtk > 0 && pAtk < 6 && eAtk === 0){
+            enemyAttack();
+            return;
+        }
+
+        // 👊 NORMAL ATTACK (timed, not spam)
+        if(eAtk === 0 && Math.random() < 0.08){
+            enemyAttack();
+            return;
+        }
+
+        // 🔄 MICRO MOVEMENT (feels human)
+        if(Math.random() < 0.02){
+            evx += (Math.random() < 0.5 ? -1 : 1) * 2;
+        }
+
+        eState = "idle";
+    }
+
+    // 🔥 TOO CLOSE → STEP BACK
+    if(dist < 45){
+        evx -= 0.3 * dir;
     }
 }
 
